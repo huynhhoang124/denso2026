@@ -16,7 +16,7 @@ Cần Python 3.10 trở lên.
 ```bash
 cd C:\denso2026\demo            # hoặc: cd denso2026/demo
 python -m pip install pandas networkx streamlit plotly pyyaml pytest
-python -m pytest -q             # 72 passed
+python -m pytest -q             # 84 passed
 streamlit run app.py            # mở http://localhost:8501
 ```
 
@@ -35,6 +35,7 @@ Giao diện có ba chế độ ở thanh bên: **Kịch bản có sẵn** (8 k�
 | `app.py` | Giao diện Streamlit một trang, tiếng Việt. |
 | `tests/test_scenarios.py` | Mỗi assert ứng với một con số trong tài liệu. |
 | `tests/test_dau_ca.py` | Diễn tập đầu ca: số tài liệu ở mục 7.1 và tính chất của bản đồ rủi ro, mức đệm, Monte Carlo. |
+| `tests/test_dong_ho.py` | Đồng hồ quyết định: số tài liệu ở mục 7.3 và tính chất của cách tính. |
 | `run.bat` | Chạy nhanh trên Windows. |
 
 ## Engine hoạt động thế nào
@@ -74,7 +75,7 @@ Giao diện có ba chế độ ở thanh bên: **Kịch bản có sẵn** (8 k�
 
 ## Kết quả kiểm tra so với tài liệu
 
-`python -m pytest -q` cho **72 passed** (58 test số tài liệu mục 5–6, 14 test diễn tập đầu ca). GitHub Actions chạy cùng bộ test trên Python 3.10 và 3.12 mỗi lần push.
+`python -m pytest -q` cho **84 passed** (58 test số tài liệu mục 5–6, 14 test diễn tập đầu ca, 12 test đồng hồ quyết định). GitHub Actions chạy cùng bộ test trên Python 3.10 và 3.12 mỗi lần push.
 
 **Mục 5–6:** Engine không được chỉnh cho khớp số tài liệu. Lần chạy đầu có 5 chỗ bản tính tay lệch mô phỏng (đánh dấu `xfail`); sau khi xem lại, IDEA.md đã được sửa theo mô phỏng (mục 10), và các test đó nay kiểm số mới.
 
@@ -139,6 +140,42 @@ Hai điều mô phỏng cho thấy:
 Giản lược: các máy hỏng cùng lúc được sửa song song (chưa xét giới hạn một tổ bảo trì như TH2); xác suất hỏng, thời
 gian sửa và dừng ngắn là giả định demo trong `config.yaml`.
 
+## Đồng hồ quyết định (mục 7.3)
+
+Mục "⏱ Đồng hồ quyết định" nằm ngay sau bảng so sánh phương án. Với mỗi phương án, engine chạy lại như thể phương án
+được quyết lúc t: trước t dây chuyền chạy như không làm gì, hành động lẽ ra bắt đầu sớm hơn dời tới t (giữ giờ kết thúc).
+Từ đó ra ba mốc:
+
+- **Muộn nhất không mất gì:** phút cuối cùng mà sản lượng 16:00, giờ tăng ca đề xuất và đơn hàng vẫn như khi quyết ngay
+  lúc phát hiện. Quét mỗi 15 phút rồi tìm nhị phân trong khoảng đầu tiên bị mất. Không tìm nhị phân trên cả ca vì kết quả
+  có thể không đơn điệu (xem TH3 bên dưới).
+- **Mỗi phút chậm mất:** độ dốc trung bình trong 30 phút sau mốc, tính theo sản phẩm và theo phút tăng ca.
+- **Hết hiệu lực:** lần đầu phương án không còn giữ được đơn, kể cả khi tăng ca tối đa 4 giờ.
+
+Khớp mục 7.3:
+
+| Tài liệu | Mô phỏng |
+|---|---|
+| TH3: phải quyết đổi thứ tự trước 11:20 (kho L-A cạn) | 11:20 |
+| TH3: sau đó mỗi phút chậm mất 2 sp | 2,0 sp/phút (thêm 1 phút tăng ca mỗi phút chậm) |
+| TH4: phương án A chỉ còn hiệu lực nếu tăng tốc từ 10:00 | 10:00 – phải quyết ngay |
+
+Những điều mô phỏng cho thấy thêm:
+
+- **TH3 – đổi thứ tự quá muộn còn hại hơn không làm gì.** Quyết sau 14:20 thì Lắp ráp vừa đổi sang Y, lô L-A về
+  lúc 15:00 lại phải đổi về X: mất thêm 40 phút đổi mã, kém hơn không làm gì (520 sp, 220 phút tăng ca). Sau 14:40
+  thì cần hơn 4 giờ tăng ca và mất đơn D-101. Từ 15:00 đổi thứ tự không còn tác dụng.
+  NCC tách lô cũng có mốc 11:20 (450 L-A phải về trước khi kho cạn).
+- **TH1 – tăng tốc ngay chưa chắc tốt nhất.** M3 chạy chậm từ 09:00. Nếu tăng tốc ngay, giới hạn 6 giờ trên chuẩn hết lúc
+  15:00 và ca ra 950 sp. Đợi đến 10:00 mới tăng tốc thì chạy cao tải đúng 10:00–16:00 và ca ra 960 sp. Đồng hồ vì vậy
+  cho mốc 11:43. Cách chạy "tăng tốc ngay khi thiếu" của engine chưa tối ưu được thời điểm bắt đầu tăng tốc.
+- **TH5 – điều người từ line 2:** mốc 10:00 chính là giờ người được điều tới theo kịch bản.
+- **Phương án không phụ thuộc thời điểm** (vd. TH4 phương án B chỉ tăng ca) ghi "quyết lúc nào trong ca cũng như nhau".
+- **TH7** chỉ có sự cố giao hàng, không đổi dòng chảy sản xuất nên không có mốc cho sản xuất.
+
+Giản lược: chưa tính thời gian chuẩn bị (gọi NCC, điều người, họp thống nhất) – quyết lúc t thì hành động có hiệu lực
+ngay lúc t. Muốn tính thêm thì trừ thời gian chuẩn bị khỏi mốc.
+
 ## Giả định của bản demo
 
 - Toàn bộ dữ liệu là tự tạo, theo đúng bảng ở mục 6. Đơn giá chi phí, sức chứa kho thành phẩm, số người ở Dập và Gia công, năng suất line 2 và giờ xe báo trễ (15:00) là giả định demo, đặt trong `config.yaml`.
@@ -152,5 +189,5 @@ gian sửa và dừng ngắn là giả định demo trong `config.yaml`.
 - **Weibull và cảnh báo trước khi hỏng (mục 4.6):** ước lượng xác suất hỏng trong 24 giờ từ lịch sử phiếu sửa; ưu tiên bảo trì = xác suất hỏng × số sản phẩm mất nếu hỏng, con số sau lấy từ chính engine này.
 - **LLM (mục 7.6):** dịch câu hỏi bằng lời thành mẫu nhiễu và dịch kết quả ra lời. Engine vẫn là bên tính số.
 - **Neo4j hoặc graph database:** khi số dây chuyền, lô và đơn lớn. Bản demo dùng networkx trong bộ nhớ.
-- Mô phỏng theo sự kiện cho nhiều sự cố chồng nhau, quy đổi mọi phương án ra tiền (mục 7.7), đồng hồ quyết định (mục 7.3), kho tri thức sự cố (mục 7.5).
+- Mô phỏng theo sự kiện cho nhiều sự cố chồng nhau, quy đổi mọi phương án ra tiền (mục 7.7), kho tri thức sự cố (mục 7.5).
 - Diễn tập đầu ca với dữ liệu thật: thay xác suất hỏng bằng Weibull theo giờ chạy, thêm rủi ro nguồn cung và thiếu người, xét giới hạn một tổ bảo trì.

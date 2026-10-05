@@ -134,27 +134,32 @@ Ghi chú tính tay ban đầu (đã khớp mô phỏng):
 - Đang làm việc 2 – Đồng hồ quyết định (IDEA.md 7.3). ĐÃ XONG bước 1: `ChinhSach.tu` (phút bắt đầu áp dụng phương án;
   trước `tu` chạy như muc 0, không đổi thứ tự). Mặc định 0 → 72 test cũ vẫn xanh.
 
+## Cập nhật phiên 3
+
+- [x] Việc 2 – Đồng hồ quyết định (IDEA.md 7.3) XONG:
+  - `engine.py`: `quyet_luc(dc, nhieu, pa, t_d)` (trước t_d chạy như muc 0, hành động có t0 < t_d dời tới t_d, giữ giờ
+    kết thúc), `_muon_nhat` và `dong_ho_quyet_dinh(dc, pt)` (không gọi trong `phan_tich`). Cột thời gian là phút kể từ
+    08:00, kiểu `Int64` (`<NA>` = không có mốc).
+  - **Đổi thiết kế so với dự kiến:** không tìm nhị phân trên cả ca vì kết quả KHÔNG đơn điệu (TH3 quyết đổi thứ tự lúc
+    15:00 tốt hơn 14:50; TH1 tăng tốc lúc 10:00 tốt hơn 09:00 do giới hạn 6 giờ trên chuẩn). Thay bằng quét mỗi 15 phút
+    + tìm nhị phân trong khoảng đầu tiên bị sai → mốc = phút cuối trước lần ĐẦU bị mất / hết giữ đơn.
+    Dung sai sản lượng 0,05 sp (0,5 sp làm TH4 A ra 10:02 vì tăng tốc chỉ thêm ~0,17 sp/phút).
+  - Số mô phỏng = số tài liệu: TH3 đổi thứ tự 11:20, 2,0 sp/phút; NCC tách lô 11:20; TH4 A 10:00 (phải quyết ngay).
+  - Phát hiện thêm (ghi README): TH3 quyết đổi thứ tự sau 14:20 kém hơn không làm gì, sau ~14:40 mất D-101;
+    TH1 mốc tăng tốc 11:43 (engine "tăng tốc ngay" chưa tối ưu thời điểm bắt đầu); TH7 không có mốc sản xuất.
+  - `tests/test_dong_ho.py` 12 test → `python3 -m pytest -q demo`: **84 passed** (~11 giây).
+  - `app.py`: mục "⏱ Đồng hồ quyết định" sau bảng phương án: câu nổi bật cho phương án đề xuất, biểu đồ dòng thời gian
+    (xanh/vàng/đỏ theo MAU_MUC, có nhãn chữ, mốc ⏱), bảng. Cache `dong_ho_kich_ban(ma)` / `dong_ho_tu_nhap(khoa)`.
+    Playwright 8 kịch bản: 0 exception, 0 lỗi JS. Ảnh `demo/screenshot_dong_ho.png`.
+  - Lưu ý Playwright: Streamlit 1.65 dùng react-aria cho selectbox → bấm `[data-testid="stSelectbox"] button` rồi
+    `[role="option"]`; chờ `h3:has-text("Sơ đồ dây chuyền")`. Script mẫu đã dùng: xem commit phiên 3 trong PR.
+  - README: mục "Đồng hồ quyết định (mục 7.3)" + bảng khớp; số test 84.
+
 ## Việc còn lại (cho phiên mới)
 
-1. **Việc 2 – Đồng hồ quyết định** (thiết kế đã chốt, chỉ cần code):
-   - `engine.py`: `dong_ho_quyet_dinh(dc, pt) -> pd.DataFrame` (hàm riêng, KHÔNG gọi trong `phan_tich` để test cũ không chậm).
-     Với mỗi phương án `r` trong `pt.phuong_an` (bỏ "Không làm gì"; phương án `kha_thi=False` ghi "không khả thi"):
-     - Kịch bản dùng `r["kq"].nhieu` (đã là lịch sửa tốt nhất ở TH2). Lúc phát hiện `t_inc` = min t0 của các nhiễu.
-     - Quyết định lúc `t_d`: `pa' = replace(pa, cs=replace(pa.cs, tu=t_d, hanh_dong=[hành động có t0 < t_d dời tới t_d]))`,
-       rồi `danh_gia(dc, nhieu, pa')` (đặt gấp linh kiện do danh_gia tự sinh, không dời).
-     - "Muộn nhất không mất gì" = t_d lớn nhất trong [t_inc, 16:00] mà sản lượng 16:00 ≥ S(t_inc) − 0,5 và
-       tăng ca đề xuất ≤ tăng ca lúc t_inc (None = ∞). Tìm nhị phân (giả định đơn điệu, ghi chú lại), bước 1 phút.
-     - "Sau đó mỗi phút chậm": (S(mốc) − S(mốc+30))/30 sp/phút và tăng ca thêm/phút.
-     - "Hết hiệu lực" = t_d lớn nhất mà vẫn `giu_don` (tìm nhị phân); None nếu ngay t_inc đã không giữ được.
-     - Cột: Phương án, Phát hiện lúc, Muộn nhất không mất gì, Còn (phút), Mỗi phút chậm mất (sp), Hết hiệu lực (giữ đơn).
-   - Số tài liệu để test (mục 7.3): TH3 "Đổi thứ tự sản xuất" mốc = 11:20 (±2 phút; kho L-A cạn), sau đó ≈ 2 sp/phút;
-     TH4 "A: Tăng tốc ca chính + tăng ca" mốc = 10:00 (phải quyết ngay). Kiểm tra thêm: TH3 "NCC tách lô" mốc 11:20.
-     Nếu mô phỏng ra khác → KHÔNG sửa code cho khớp, báo lại.
-   - `app.py`: mục "⏱ Đồng hồ quyết định" ngay sau bảng "So sánh phương án": bảng + câu nổi bật cho phương án đề xuất
-     ("phải quyết trước HH:MM, còn X phút kể từ lúc phát hiện"); biểu đồ timeline mỗi phương án: t_inc→mốc xanh
-     (không mất gì), mốc→hết hiệu lực vàng (vẫn giữ đơn, mất thêm), sau đó đỏ – dùng MAU_MUC, có nhãn chữ.
-     Cache bằng `st.cache_resource` theo mã kịch bản / khóa tự nhập. Kiểm tra Playwright với `newContext({locale: 'vi-VN'})`.
-   - Cập nhật README (mục mới + số test), HANDOFF; commit + push; báo người dùng.
-2. Việc 4: kịch bản demo 5 phút + slide pitch (hỏi người dùng trước).
-3. Hỏi người dùng: có cập nhật IDEA.md/docx mục 7.1–7.3 bằng số mô phỏng không.
+1. Việc 4: kịch bản demo 5 phút + slide pitch (hỏi người dùng trước – ĐÃ HỎI ở phiên 3, chờ trả lời).
+2. Hỏi người dùng: có cập nhật IDEA.md/docx mục 7.1–7.3 bằng số mô phỏng không (ĐÃ HỎI ở phiên 3, chờ trả lời).
+   Gợi ý nội dung 7.3: thêm "quyết đổi thứ tự sau 14:20 còn kém hơn không làm gì".
+3. Có thể làm (nếu người dùng muốn): engine chọn thời điểm bắt đầu tăng tốc tốt nhất (TH1: đợi đến 10:00 được 960 thay
+   vì 950) – đổi quy tắc muc 2, phải kiểm lại toàn bộ số tài liệu.
 4. Theo dõi PR #1 (CI / review).

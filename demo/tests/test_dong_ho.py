@@ -86,7 +86,7 @@ def test_quyet_cang_muon_cang_mat():
 
 
 def test_doi_thu_tu_qua_muon_hai_hon_loi():
-    """TH3: quyết đổi thứ tự sau ~14:40 thì đổi sang Y rồi lại đổi về X khi lô 15:00 về → mất đơn D-101."""
+    """TH3: quyết đổi thứ tự sau ~14:40 thì vừa đổi sang Y lại phải đổi về X khi lô 15:00 về → cần > 4 giờ tăng ca."""
     r = hang("th3", "Đổi thứ tự sản xuất")
     assert phut("14:00") <= r["Hết hiệu lực (giữ đơn)"] < phut("15:00")
 
