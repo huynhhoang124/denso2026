@@ -81,8 +81,9 @@ Ghi chú tính tay ban đầu (đã khớp mô phỏng):
 - [x] `demo/scenarios.py` (8 kịch bản + bảng phả hệ TH6; `chay(ma)` -> (PhanTich, phần riêng))
 - [x] `demo/tests/test_scenarios.py` → `python3 -m pytest -q demo`: 50 passed, 5 xfailed (5 chỗ lệch dưới đây)
   (lưu ý: lệnh `pytest` trần trong container trỏ Python hệ thống thiếu thư viện → dùng `python3 -m pytest`)
-- [ ] `demo/app.py`
-- [ ] `demo/README.md`
-- [ ] Chạy streamlit + kiểm tra bằng trình duyệt (Playwright), chụp màn hình
-- [ ] Cập nhật "Chỗ lệch" theo số mô phỏng thật
+- [x] `demo/app.py`
+- [x] `demo/README.md` (bảng khớp + 5 chỗ lệch)
+- [x] Chạy streamlit + Playwright (node, /opt/node22/lib/node_modules/playwright): 8 kịch bản + tự nhập, 0 exception, 0 lỗi JS; ảnh `demo/screenshot_th3.png`
+- [x] Cập nhật "Chỗ lệch" theo số mô phỏng thật
+- Quyết định thêm: Xanh = chỉ chia tải/tăng tốc (bậc ≤ 2), không tăng ca/đổi thứ tự; đơn gấp mã khác mã đang chạy → sinh phương án đổi thứ tự.
 - [ ] Commit, push, draft PR, subscribe PR, báo cáo người dùng

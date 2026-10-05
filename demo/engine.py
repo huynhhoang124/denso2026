@@ -647,7 +647,9 @@ def phuong_an_chung(dc: DayChuyen, nhieu: list[Nhieu]) -> list[PhuongAn]:
           PhuongAn("Chia tải", 1, ChinhSach(muc=1)),
           PhuongAn("Chia tải + tăng tốc", 2, ChinhSach(muc=2))]
     thu = mo_phong(dc, nhieu, ChinhSach(muc=1))
-    if any("thiếu linh kiện" == x for x in thu.trang_thai[dc.cd_lap][: dc.ca]) and len(dc.san_pham) > 1:
+    thieu_lk = any("thiếu linh kiện" == x for x in thu.trang_thai[dc.cd_lap][: dc.ca])
+    ma_khac = any(n.dai_luong == "nhu_cau" and n.diem != dc.sp_chinh for n in nhieu)
+    if (thieu_lk or ma_khac) and len(dc.san_pham) > 1:
         ds += [PhuongAn("Đổi thứ tự sản xuất", 3, ChinhSach(muc=1, doi_thu_tu=True)),
                PhuongAn("Đổi thứ tự + tăng tốc", 3, ChinhSach(muc=2, doi_thu_tu=True))]
     return ds
@@ -1025,7 +1027,8 @@ def phan_tich(dc: DayChuyen, nhieu: list[Nhieu], phuong_an_them: list[PhuongAn] 
         else:
             muc = "Đỏ"
     else:
-        xanh = any(r["giu_don"] and r["pa"].bac <= 1 and r["tang_ca_de_xuat"] == 0 for r in ket_qua)
+        # Xanh: chỉ cần chia tải / tăng tốc trong giới hạn (gần như không tốn), không tăng ca, không đổi thứ tự
+        xanh = any(r["giu_don"] and r["pa"].bac <= 2 and r["tang_ca_de_xuat"] == 0 for r in ket_qua)
         muc = "Xanh" if xanh else "Vàng" if de_xuat else "Đỏ"
     gui_cho = {"Xanh": ["Bảo trì"], "Vàng": ["Bảo trì", "Kế hoạch"],
                "Đỏ": ["Bảo trì", "Kế hoạch", "Giao hàng & Sales"]}[muc]
@@ -1059,9 +1062,10 @@ def thong_diep(dc: DayChuyen, pt: PhanTich) -> dict[str, list[str]]:
     elif hong:
         for n in hong:
             if n.thay_doi <= -100:
-                bt.append(f"Ưu tiên sửa {n.diem}: dự kiến {n.thoi_luong_gio:g} giờ. Cập nhật tiến độ để hệ thống tính lại.")
+                du_kien = f"dự kiến {n.thoi_luong_gio:g} giờ" if n.thoi_luong_gio else "chưa có thời gian sửa dự kiến"
+                bt.append(f"Ưu tiên sửa {n.diem}: {du_kien}. Cập nhật tiến độ để hệ thống tính lại.")
     for _, r in pt.tts.iterrows():
-        if r["Kết luận"] != "–":
+        if r["Kết luận"] != "–" and r["Thời gian sửa (giờ)"] is not None:
             bt.append(f"{r['Máy']}: hụt {r['Hụt (sp/h)']:g} sp/h; {r['Đệm sau']} đỡ được "
                       f"{r['Đệm sau đỡ được (giờ)'] if r['Đệm sau đỡ được (giờ)'] is not None else '–'} giờ "
                       f"so với {r['Thời gian sửa (giờ)']:g} giờ sửa → {r['Kết luận'].lower()}.")
@@ -1137,7 +1141,7 @@ def thong_diep(dc: DayChuyen, pt: PhanTich) -> dict[str, list[str]]:
         gh.append(f"Nếu không làm gì: {', '.join(tre0)} có nguy cơ trễ.")
     for g in (dx or k0)["kq"].don_gap:
         t = (dx or k0)["kq"].gio_dat((dx or k0)["kq"].ke_hoach_tong)
-        gh.append(f"Đơn gấp {g['id']}: {'NHẬN ĐƯỢC' if dx else 'chưa nhận được'} – xong lúc {gio(t)}, "
+        gh.append(f"{g['id']}: {'NHẬN ĐƯỢC' if dx else 'chưa nhận được'} – xong lúc {gio(t)}, "
                   f"hạn {gio(g['han'])} (dư {thoi_luong(g['han'] - t) if t is not None else '–'}).")
     if pt.giao_hang:
         x = pt.giao_hang

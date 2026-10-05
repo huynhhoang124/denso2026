@@ -114,7 +114,7 @@ def kich_ban() -> dict[str, KichBan]:
         KichBan(
             "th4", "TH4: Khách chèn đơn gấp 300 sp",
             "10:00, khách C đặt thêm 300 sp mã X, cần trước 20:00 hôm nay. Kế hoạch ca đã kín 960 sp.",
-            [Nhieu("X", "nhu_cau", 300, "10:00", han="20:00", ma="C", mo_ta="Đơn gấp khách C")],
+            [Nhieu("X", "nhu_cau", 300, "10:00", han="20:00", ma="Đơn C", mo_ta="Đơn gấp khách C")],
             phuong_an_them=[
                 PhuongAn("A: Tăng tốc ca chính + tăng ca", 2, ChinhSach(muc=2),
                          mo_ta="Cả chuyền chạy tối đa từ 10:00 (tối đa 6 giờ), phần còn lại tăng ca"),
