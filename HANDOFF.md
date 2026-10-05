@@ -134,27 +134,26 @@ Ghi chú tính tay ban đầu (đã khớp mô phỏng):
 - Đang làm việc 2 – Đồng hồ quyết định (IDEA.md 7.3). ĐÃ XONG bước 1: `ChinhSach.tu` (phút bắt đầu áp dụng phương án;
   trước `tu` chạy như muc 0, không đổi thứ tự). Mặc định 0 → 72 test cũ vẫn xanh.
 
+## Cập nhật phiên 3 – nâng cấp giao diện "War Room" + Đồng hồ quyết định
+
+Nhánh phiên 3: `claude/kind-albattani-rwc6p2` (tạo từ `claude/stoic-maxwell-8m9yp6`), draft PR base = `claude/stoic-maxwell-8m9yp6`.
+Người dùng chốt: trình chiếu trên laptop cho giám khảo xem gần; phong cách War Room tối; gộp Việc 2; KHÔNG thêm thư viện.
+
+- [x] Việc 2 – `engine.dong_ho_quyet_dinh(dc, pt)` (hàm riêng, không gọi trong `phan_tich`) + `tests/test_dong_ho.py` (6 test).
+  Số mô phỏng = số tài liệu: TH3 đổi thứ tự 11:20, ~2 sp/phút (thêm ~1 phút tăng ca/phút); NCC tách lô 11:20; TH4 A 10:02.
+  Tổng **78 passed**. Mọi phương án mẫu vẫn giữ đơn nếu quyết trước 16:00 (bằng tăng ca ≤ 4h) → "hết hiệu lực" = "còn cả ca".
+- [x] `demo/.streamlit/config.toml` (theme tối), `demo/giao_dien.py` (màu đã chạy validator dataviz trên nền #131a2b, CSS,
+  template Plotly "warroom", thẻ HTML), `demo/app.py` viết lại: chế độ Tổng quan; trang sự cố = hero + 4 KPI (có đồng hồ) +
+  thẻ đề xuất + 01 bản đồ lan truyền có hoạt ảnh (Plotly frames, mở ở lúc tệ nhất, ▶ phát từ lúc sự cố, chuyển không làm gì ↔
+  đề xuất) + 02 thẻ phương án / biểu đồ cứu được / thanh đồng hồ + 03 bộ phận + truy vết (TH6) + 04 chi tiết kỹ thuật.
+  Diễn tập đầu ca: gauge + thẻ KPI, cùng phong cách.
+- [x] Playwright (viewport 1440×900, `locale: 'vi-VN'`): Tổng quan, 8 kịch bản, ▶ bản đồ, chuyển đề xuất, Diễn tập đầu ca,
+  Tự nhập → 0 exception, 0 lỗi JS. Ảnh: `demo/screenshot_tong_quan.png`, `screenshot_th3.png`, `screenshot_dau_ca.png`.
+  Lưu ý kiểm tra: ảnh "full page" phải nới viewport (Streamlit cuộn trong `stMain`); sửa `giao_dien.py` cần khởi động lại server.
+
 ## Việc còn lại (cho phiên mới)
 
-1. **Việc 2 – Đồng hồ quyết định** (thiết kế đã chốt, chỉ cần code):
-   - `engine.py`: `dong_ho_quyet_dinh(dc, pt) -> pd.DataFrame` (hàm riêng, KHÔNG gọi trong `phan_tich` để test cũ không chậm).
-     Với mỗi phương án `r` trong `pt.phuong_an` (bỏ "Không làm gì"; phương án `kha_thi=False` ghi "không khả thi"):
-     - Kịch bản dùng `r["kq"].nhieu` (đã là lịch sửa tốt nhất ở TH2). Lúc phát hiện `t_inc` = min t0 của các nhiễu.
-     - Quyết định lúc `t_d`: `pa' = replace(pa, cs=replace(pa.cs, tu=t_d, hanh_dong=[hành động có t0 < t_d dời tới t_d]))`,
-       rồi `danh_gia(dc, nhieu, pa')` (đặt gấp linh kiện do danh_gia tự sinh, không dời).
-     - "Muộn nhất không mất gì" = t_d lớn nhất trong [t_inc, 16:00] mà sản lượng 16:00 ≥ S(t_inc) − 0,5 và
-       tăng ca đề xuất ≤ tăng ca lúc t_inc (None = ∞). Tìm nhị phân (giả định đơn điệu, ghi chú lại), bước 1 phút.
-     - "Sau đó mỗi phút chậm": (S(mốc) − S(mốc+30))/30 sp/phút và tăng ca thêm/phút.
-     - "Hết hiệu lực" = t_d lớn nhất mà vẫn `giu_don` (tìm nhị phân); None nếu ngay t_inc đã không giữ được.
-     - Cột: Phương án, Phát hiện lúc, Muộn nhất không mất gì, Còn (phút), Mỗi phút chậm mất (sp), Hết hiệu lực (giữ đơn).
-   - Số tài liệu để test (mục 7.3): TH3 "Đổi thứ tự sản xuất" mốc = 11:20 (±2 phút; kho L-A cạn), sau đó ≈ 2 sp/phút;
-     TH4 "A: Tăng tốc ca chính + tăng ca" mốc = 10:00 (phải quyết ngay). Kiểm tra thêm: TH3 "NCC tách lô" mốc 11:20.
-     Nếu mô phỏng ra khác → KHÔNG sửa code cho khớp, báo lại.
-   - `app.py`: mục "⏱ Đồng hồ quyết định" ngay sau bảng "So sánh phương án": bảng + câu nổi bật cho phương án đề xuất
-     ("phải quyết trước HH:MM, còn X phút kể từ lúc phát hiện"); biểu đồ timeline mỗi phương án: t_inc→mốc xanh
-     (không mất gì), mốc→hết hiệu lực vàng (vẫn giữ đơn, mất thêm), sau đó đỏ – dùng MAU_MUC, có nhãn chữ.
-     Cache bằng `st.cache_resource` theo mã kịch bản / khóa tự nhập. Kiểm tra Playwright với `newContext({locale: 'vi-VN'})`.
-   - Cập nhật README (mục mới + số test), HANDOFF; commit + push; báo người dùng.
-2. Việc 4: kịch bản demo 5 phút + slide pitch (hỏi người dùng trước).
+1. Người dùng duyệt giao diện mới (ảnh chụp) và PR phiên 3; chỉnh theo góp ý.
+2. Việc 4: kịch bản demo 5 phút + slide pitch (hỏi người dùng trước; có thể đang làm ở tab khác).
 3. Hỏi người dùng: có cập nhật IDEA.md/docx mục 7.1–7.3 bằng số mô phỏng không.
-4. Theo dõi PR #1 (CI / review).
+4. Theo dõi PR #1 và PR phiên 3 (CI / review).

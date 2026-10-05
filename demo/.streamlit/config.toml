@@ -1,0 +1,16 @@
+# Giao diện "War Room" tối cho demo D3. Streamlit nạp file này khi chạy từ thư mục demo (run.bat làm vậy).
+[theme]
+base = "dark"
+primaryColor = "#3987e5"
+backgroundColor = "#0b1020"
+secondaryBackgroundColor = "#131a2b"
+textColor = "#e8ecf4"
+baseRadius = "0.6rem"
+showSidebarBorder = true
+chartCategoricalColors = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"]
+
+[client]
+toolbarMode = "minimal"
+
+[browser]
+gatherUsageStats = false
