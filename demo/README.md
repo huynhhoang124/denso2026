@@ -7,6 +7,7 @@ hệ thống trả về:
 - sản lượng dự đoán;
 - các phương án xử lý (số cứu được, chi phí, giờ tăng ca, mức xáo trộn);
 - mức cảnh báo Xanh/Vàng/Đỏ;
+- đồng hồ quyết định: mỗi phương án phải quyết muộn nhất lúc nào;
 - câu trả lời riêng cho Bảo trì, Kế hoạch và Giao hàng & Sales.
 
 ## Cách chạy
@@ -17,13 +18,14 @@ Cần Python 3.10 trở lên.
 cd C:\denso2026\demo            # hoặc: cd denso2026/demo
 python -m pip install pandas networkx streamlit plotly pyyaml pytest
 python -m pytest -q             # 84 passed
-streamlit run app.py            # mở http://localhost:8501
+streamlit run app.py            # mở http://localhost:8501 (chạy từ thư mục demo để nạp giao diện tối)
 ```
 
 Nên dùng `python -m pytest` thay cho `pytest`, để chắc chắn test chạy đúng bộ Python đã cài thư viện.
 Trên Windows có thể bấm đúp `run.bat`: cài thư viện, chạy test rồi mở giao diện.
 
-Giao diện có ba chế độ ở thanh bên: **Kịch bản có sẵn** (8 kịch bản), **Tự nhập sự cố** và **Diễn tập đầu ca**.
+Giao diện có bốn chế độ ở thanh bên: **Tổng quan** (8 kịch bản trên một màn hình), **Kịch bản có sẵn**,
+**Tự nhập sự cố** và **Diễn tập đầu ca**. Xem mục "Giao diện" bên dưới.
 
 ## Các file
 
@@ -32,8 +34,11 @@ Giao diện có ba chế độ ở thanh bên: **Kịch bản có sẵn** (8 k�
 | `config.yaml` | Dây chuyền giả định ở mục 6: Dập D1, D2 → B1 → Gia công M1–M3 → B2 → Lắp ráp (6 người) → kho thành phẩm; linh kiện L-A/L-B; đơn D-101, D-102, D-201; xe giao; line 2; phân bố thời gian sửa; đơn giá. Những thông số tài liệu không nêu đều ghi "giả định demo". |
 | `engine.py` | Lớp Logic (đồ thị networkx) và lớp Nghiệp vụ (mô phỏng bước 1 phút), cùng thang xử lý, mức cảnh báo, thời gian chịu đựng của đệm, thứ tự sửa máy, truy vết ngược, phân tích giao hàng và câu trả lời cho từng bộ phận. |
 | `scenarios.py` | 8 kịch bản (ví dụ gốc và TH1–TH7) và bảng phả hệ sản phẩm tự tạo cho TH6. |
-| `app.py` | Giao diện Streamlit một trang, tiếng Việt. |
+| `app.py` | Giao diện Streamlit tiếng Việt: tổng quan, trang sự cố, tự nhập, diễn tập đầu ca. |
+| `giao_dien.py` | Phong cách "War Room" tối: màu, CSS, template Plotly và các thẻ HTML dùng chung. |
+| `.streamlit/config.toml` | Theme tối của Streamlit (nạp khi chạy từ thư mục `demo`). |
 | `tests/test_scenarios.py` | Mỗi assert ứng với một con số trong tài liệu. |
+| `tests/test_dong_ho.py` | Đồng hồ quyết định: số tài liệu ở mục 7.3. |
 | `tests/test_dau_ca.py` | Diễn tập đầu ca: số tài liệu ở mục 7.1 và tính chất của bản đồ rủi ro, mức đệm, Monte Carlo. |
 | `tests/test_dong_ho.py` | Đồng hồ quyết định: số tài liệu ở mục 7.3 và tính chất của cách tính. |
 | `run.bat` | Chạy nhanh trên Windows. |
@@ -142,7 +147,7 @@ gian sửa và dừng ngắn là giả định demo trong `config.yaml`.
 
 ## Đồng hồ quyết định (mục 7.3)
 
-Mục "⏱ Đồng hồ quyết định" nằm ngay sau bảng so sánh phương án. Với mỗi phương án, engine chạy lại như thể phương án
+Trên giao diện: chỉ số "⏱ Đồng hồ quyết định" ở đầu trang sự cố và thanh thời gian ở mục 02. Với mỗi phương án, engine chạy lại như thể phương án
 được quyết lúc t: trước t dây chuyền chạy như không làm gì, hành động lẽ ra bắt đầu sớm hơn dời tới t (giữ giờ kết thúc).
 Từ đó ra ba mốc:
 
@@ -175,6 +180,23 @@ Những điều mô phỏng cho thấy thêm:
 
 Giản lược: chưa tính thời gian chuẩn bị (gọi NCC, điều người, họp thống nhất) – quyết lúc t thì hành động có hiệu lực
 ngay lúc t. Muốn tính thêm thì trừ thời gian chuẩn bị khỏi mốc.
+
+## Giao diện
+
+Phong cách "War Room" tối, thiết kế cho giám khảo xem gần trên laptop (1440×900): tóm tắt ở màn hình đầu, chi tiết
+xếp lớp bên dưới. Không thêm thư viện – chỉ theme Streamlit, CSS và Plotly.
+
+- **Tổng quan:** 8 kịch bản dạng thẻ (mẫu nhiễu, mức cảnh báo, sản lượng không làm gì / đề xuất, tăng ca), bấm để mở.
+- **Trang sự cố:** mức cảnh báo, 4 chỉ số (sản lượng, thiếu, tăng ca, đồng hồ quyết định), thẻ đề xuất; rồi
+  01 bản đồ lan truyền trên đồ thị lớp Logic – mở sẵn ở lúc tệ nhất, nút ▶ phát lại từng 10 phút từ lúc sự cố, chuyển
+  "không làm gì ↔ đề xuất"; 02 thẻ phương án, biểu đồ cứu được và thanh đồng hồ quyết định; 03 câu trả lời từng bộ phận;
+  04 chi tiết kỹ thuật (Gantt, đệm, linh kiện, bảng số, đối chiếu IDEA.md).
+- Màu trạng thái cố định theo nghĩa (dừng/hỏng, hết/cạn, đói hàng, bị chặn/đầy, tăng tốc, đổi mã), luôn kèm chú giải
+  chữ; bảng màu danh mục đã kiểm tra tương phản và mù màu trên nền tối.
+- Thời gian engine hiển thị là thời gian thật của lần tính đầu (sau đó dùng lại từ bộ nhớ đệm).
+
+![Trang tổng quan](screenshot_tong_quan.png)
+![TH3 – lô linh kiện trễ](screenshot_th3.png)
 
 ## Giả định của bản demo
 

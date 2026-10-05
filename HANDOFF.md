@@ -155,8 +155,26 @@ Ghi chú tính tay ban đầu (đã khớp mô phỏng):
     `[role="option"]`; chờ `h3:has-text("Sơ đồ dây chuyền")` (đừng chờ text "Đồng hồ quyết định": khớp cả chữ spinner).
   - README: mục "Đồng hồ quyết định (mục 7.3)" + bảng khớp; số test 84.
 
+## Cập nhật phiên 3b – nâng cấp giao diện "War Room" (tab song song)
+
+Nhánh `claude/kind-albattani-rwc6p2` (tạo từ `claude/stoic-maxwell-8m9yp6`), draft PR base = `claude/stoic-maxwell-8m9yp6`.
+Người dùng chốt: trình chiếu trên laptop cho giám khảo xem gần; phong cách War Room tối; KHÔNG thêm thư viện.
+Tab này cũng làm đồng hồ quyết định song song; khi gộp đã **giữ bản engine + test của phiên 3** ở trên (đúng hơn: không giả
+định đơn điệu) và cho giao diện mới dùng `dong_ho_quyet_dinh` của bản đó.
+
+- [x] `demo/.streamlit/config.toml` (theme tối), `demo/giao_dien.py` (màu đã chạy validator dataviz trên nền #131a2b, CSS,
+  template Plotly "warroom", thẻ HTML), `demo/app.py` viết lại: chế độ Tổng quan; trang sự cố = hero + 4 KPI (có đồng hồ) +
+  thẻ đề xuất + 01 bản đồ lan truyền có hoạt ảnh (Plotly frames, mở ở lúc tệ nhất, ▶ phát từ lúc sự cố, chuyển không làm gì ↔
+  đề xuất) + 02 thẻ phương án / biểu đồ cứu được / thanh đồng hồ + 03 bộ phận + truy vết (TH6) + 04 chi tiết kỹ thuật.
+  Diễn tập đầu ca: gauge + thẻ KPI, cùng phong cách. Mục đồng hồ riêng của phiên 3 được thay bằng KPI + thanh ở mục 02 + bảng ở 04.
+- [x] Playwright (viewport 1440×900, `locale: 'vi-VN'`): Tổng quan, 8 kịch bản, ▶ bản đồ, chuyển đề xuất, Diễn tập đầu ca,
+  Tự nhập → 0 exception, 0 lỗi JS. Ảnh: `demo/screenshot_tong_quan.png`, `screenshot_th3.png`, `screenshot_dau_ca.png`.
+  Lưu ý: ảnh "full page" phải nới viewport (Streamlit cuộn trong `stMain`); sửa `giao_dien.py` cần khởi động lại server;
+  mở kịch bản nhanh bằng nút "Mở THx →" ở trang Tổng quan.
+
 ## Việc còn lại (cho phiên mới)
 
+0. Người dùng duyệt giao diện mới (ảnh chụp, PR của nhánh `claude/kind-albattani-rwc6p2`).
 1. Việc 4: kịch bản demo 5 phút + slide pitch (hỏi người dùng trước – ĐÃ HỎI ở phiên 3, chờ trả lời).
 2. ~~Cập nhật IDEA.md/docx mục 7.1–7.3~~ XONG (phiên 3, người dùng đồng ý): 7.1 thêm bản đồ rủi ro (M3 đầu, LR-1 mất 330),
    M1 → B2 150, B1 đủ, đệm dày không giảm tăng ca; 7.2 thay 87% minh họa bằng 42% mô phỏng (+38', 99,7%, D-101 100%);
