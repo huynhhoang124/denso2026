@@ -1,8 +1,7 @@
 """Mỗi assert ứng với một con số trong IDEA.md (mục 5–6).
 
-Con số trong tài liệu là tính tay. Chỗ nào mô phỏng ra khác thì KHÔNG sửa engine cho khớp:
-test được đánh dấu xfail(strict=True) kèm giải thích – suite vẫn xanh nhưng chỗ lệch được ghi lại
-(nếu sau này engine bỗng ra đúng số tài liệu, strict=True sẽ báo để xem lại).
+Con số trong tài liệu ban đầu là tính tay. Năm chỗ mô phỏng ra khác (TH2 ×2, TH3, TH6, TH7) KHÔNG sửa engine
+cho khớp mà sửa IDEA.md (xem mục 10); các test đó nay kiểm số mới, lý do lệch ghi ở comment "Đã sửa trong IDEA.md".
 """
 from functools import lru_cache
 
@@ -98,20 +97,22 @@ def test_th2_dem_b1_luc_16h_12_va_218():
     assert _thu_tu("D1 → M2")["B1 lúc 16:00"] == pytest.approx(218, abs=SL)
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "LỆCH: engine chọn D1 trước. Sửa M2 trước cho Gia công 848 nhưng rút B1 từ 200 xuống 12; "
-    "theo quy ước 'đệm phải trả về mức mục tiêu' sản lượng hiệu dụng chỉ còn ~660 (D1 trước: 792) và cần "
-    "~180 phút tăng ca để đủ kế hoạch + trả đệm (D1 trước: ~104 phút). Dây chuyền cân bằng (mọi công đoạn chuẩn "
-    "120), D1 hỏng làm Dập hụt 50 sp/h còn M2 hỏng làm Gia công hụt 28 sp/h."))
-def test_th2_he_thong_chon_sua_m2_truoc():
-    assert kb("th2")[0].thu_tu_sua.iloc[0]["Thứ tự sửa"].startswith("M2")
+# Đã sửa trong IDEA.md (bản tính tay chọn M2 trước): sửa M2 trước cho Gia công 848 nhưng rút B1 từ 200 xuống 12;
+# theo quy ước "đệm phải trả về mức mục tiêu" sản lượng hiệu dụng chỉ còn ~660 (D1 trước: 792) và cần ~180 phút
+# tăng ca để đủ kế hoạch + trả đệm (D1 trước: ~104 phút). Dây chuyền cân bằng (mọi công đoạn chuẩn 120):
+# D1 hỏng làm Dập hụt 50 sp/h, còn M2 hỏng làm Gia công chỉ hụt 28 sp/h.
+def test_th2_san_luong_hieu_dung_sau_tra_dem_660_va_792():
+    assert _thu_tu("M2 → D1")["Sản lượng hiệu dụng 16:00"] == pytest.approx(660, abs=SL)
+    assert _thu_tu("D1 → M2")["Sản lượng hiệu dụng 16:00"] == pytest.approx(792, abs=SL)
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "LỆCH: tài liệu 1 giờ 20 chỉ bù 112 sp ở Gia công, chưa tính trả B1 (thiếu 188) về mục tiêu; "
-    "engine: ~180 phút."))
-def test_th2_sua_m2_truoc_tang_ca_1_gio_20():
-    assert _thu_tu("M2 → D1")["Tăng ca để đủ kế hoạch + trả đệm (phút)"] == pytest.approx(80, abs=5)
+def test_th2_he_thong_chon_sua_d1_truoc():
+    assert kb("th2")[0].thu_tu_sua.iloc[0]["Thứ tự sửa"].startswith("D1")
+
+
+# Đã sửa trong IDEA.md (bản tính tay: 1 giờ 20 – chỉ bù 112 sp ở Gia công, chưa trả B1 thiếu 188 về mục tiêu).
+def test_th2_sua_m2_truoc_tang_ca_khoang_3_gio():
+    assert _thu_tu("M2 → D1")["Tăng ca để đủ kế hoạch + trả đệm (phút)"] == pytest.approx(180, abs=5)
 
 
 def test_th2_sua_d1_truoc_tang_ca_1_gio_45():
@@ -150,11 +151,14 @@ def test_th3_nguong_lo_ve_truoc_16h05():
     assert kb("th3")[1]["nguong_lo"] == pytest.approx(phut("16:05"), abs=PHUT)
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "LỆCH: tài liệu nói ngày mai 450 X + 500 Y = 950 sp 'vừa một ca', nhưng làm 2 mã cần 1 lần đổi mã "
-    "20 phút (= 40 sp) → 990 > 960. Engine đề xuất ~40 phút tăng ca hôm nay cho phương án đổi thứ tự."))
-def test_th3_doi_thu_tu_khong_can_tang_ca():
-    assert pa("th3", "Đổi thứ tự sản xuất")["tang_ca_de_xuat"] == 0
+# Đã sửa trong IDEA.md (bản tính tay: ngày mai 450 X + 500 Y = 950 sp "vừa một ca"): làm 2 mã cần 1 lần đổi mã
+# 20 phút (≈ 40 sp) → 990 > 960 → đổi thứ tự cần ~40 phút tăng ca hôm nay; kết hợp tăng tốc thì không cần.
+def test_th3_doi_thu_tu_tang_ca_khoang_40_phut():
+    assert pa("th3", "Đổi thứ tự sản xuất")["tang_ca_de_xuat"] == pytest.approx(40, abs=PHUT)
+
+
+def test_th3_doi_thu_tu_ket_hop_tang_toc_khong_can_tang_ca():
+    assert pa("th3", "Đổi thứ tự + tăng tốc")["tang_ca_de_xuat"] == 0
 
 
 def test_th3_muc_vang():
@@ -223,12 +227,14 @@ def test_th6_m3_dung_1_gio_thieu_them_26():
     assert pa("th6", "Chia tải")["san_luong"] == pytest.approx(960 - 88 - 26, abs=SL)
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "LỆCH: tài liệu trừ 30 sp kho thành phẩm ở TH6 (84 sp → 42 phút) nhưng không trừ ở mục 5 (76 sp → 38 phút). "
-    "Engine dùng một quy ước cho mọi trường hợp: kho TP cũng là đệm phải trả về mục tiêu → 114 sp → ~57 phút "
-    "(mức chia tải); có tăng tốc thì ~48 phút."))
-def test_th6_tang_ca_khoang_42_phut():
-    assert pa("th6", "Chia tải")["tang_ca_ke_hoach"] == pytest.approx(42, abs=PHUT)
+# Đã sửa trong IDEA.md (bản tính tay: 42 phút – trừ 30 sp kho thành phẩm ở TH6 nhưng không trừ ở mục 5).
+# Một quy ước cho mọi trường hợp: kho TP cũng là đệm phải trả về mục tiêu → 114 sp → ~57 phút; có tăng tốc ~48 phút.
+def test_th6_tang_ca_chia_tai_khoang_57_phut():
+    assert pa("th6", "Chia tải")["tang_ca_ke_hoach"] == pytest.approx(57, abs=PHUT)
+
+
+def test_th6_tang_ca_tang_toc_khoang_48_phut():
+    assert pa("th6", "Chia tải + tăng tốc")["tang_ca_ke_hoach"] == pytest.approx(48, abs=PHUT)
 
 
 # ---------------------------------------------------------------- TH7
@@ -238,16 +244,14 @@ def test_th7_hang_den_khach_20h30_tre_1_5_gio():
     assert g["tre"] == 90
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "LỆCH: có phương án giữ đơn đúng hạn (thuê xe ngoài đến 18:30) nên theo định nghĩa mục 4.5 "
-    "('Đỏ = có đơn trễ dù đã dùng hết các bước') engine cho Vàng; bảng tổng hợp tài liệu ghi Đỏ."))
-def test_th7_muc_do():
-    assert kb("th7")[0].muc == "Đỏ"
+# Đã sửa trong IDEA.md (bản tính tay ghi Đỏ): còn phương án giữ đơn đúng hạn (thuê xe ngoài đến 18:30) nên theo
+# định nghĩa mục 4.5 ("Đỏ = có đơn trễ dù đã dùng hết các bước") là Vàng – kiểm ở test_muc_canh_bao bên dưới.
 
 
 # ---------------------------------------------------------------- mức cảnh báo (bảng tổng hợp mục 6)
 @pytest.mark.parametrize("ma, muc", [("goc", "Vàng"), ("th1", "Xanh"), ("th2", "Vàng"), ("th3", "Vàng"),
-                                     ("th4", "Vàng"), ("th5", "Vàng"), ("th6", "Vàng")])
+                                     ("th4", "Vàng"), ("th5", "Vàng"), ("th6", "Vàng"),
+                                     ("th7", "Vàng")])
 def test_muc_canh_bao(ma, muc):
     assert kb(ma)[0].muc == muc
 

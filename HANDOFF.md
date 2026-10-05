@@ -96,12 +96,19 @@ Ghi chú tính tay ban đầu (đã khớp mô phỏng):
   TH6 → ~57' (48' nếu tăng tốc) + đặt gấp 48 L-A; TH7 → Vàng; mục 4.7, 9.1, 10, bảng tổng hợp). Thêm ghi chú TH4 đặt gấp 260 L-A.
 - Đã hủy lần tự kiểm tra PR (send_later) của phiên 1; phiên mới tự subscribe lại PR #1.
 
+## Cập nhật phiên 2
+
+- [x] 5 test xfail → test thường theo số mới IDEA.md (lý do giữ ở comment "Đã sửa trong IDEA.md"): TH2 chọn D1 trước,
+  TH2 M2 trước tăng ca 180', TH3 đổi thứ tự 40' + "đổi thứ tự + tăng tốc" 0', TH6 57' (chia tải) / 48' (tăng tốc), TH7 Vàng
+  (thêm vào `test_muc_canh_bao`). Thêm test TH2 sản lượng hiệu dụng 660/792. `python3 -m pytest -q demo` → **58 passed**.
+  Không đổi engine; mọi số mô phỏng = số IDEA.md mới (TH2: 660/792, 180'/104'; TH3: 40'/0'; TH6: 57'/48').
+- [x] `scenarios.py`: chuỗi `tai_lieu` của th2, th3, th4 (260 L-A), th6, th7 theo IDEA.md mới.
+- [x] `README.md`: "Chỗ lệch (xfail)" → "Đã sửa trong IDEA.md sau khi mô phỏng"; kết quả test 58 passed.
+- [x] Thêm `.gitignore`, bỏ `__pycache__` khỏi git.
+- [x] Streamlit + Playwright: 8 kịch bản, 0 exception, 0 lỗi JS; chuỗi "Con số trong tài liệu" mới hiển thị đúng.
+- [x] Cập nhật mô tả PR #1.
+
 ## Việc còn lại (cho phiên mới)
 
-1. `demo/tests/test_scenarios.py`: 5 test xfail đang assert SỐ CŨ của tài liệu – nay IDEA.md đã đổi. Chuyển thành test thường theo số mới
-   (bỏ xfail, giữ lý do thành comment): TH2 hệ thống chọn D1 trước; TH2 M2 trước tăng ca ≈ 180' (±5); TH3 "Đổi thứ tự sản xuất" tăng ca ≈ 40'
-   và "Đổi thứ tự + tăng tốc" = 0'; TH6 tăng ca ≈ 57' (chia tải) / 48' (tăng tốc); TH7 mức Vàng (thêm vào bảng mức cảnh báo). Kỳ vọng: 55 passed.
-2. `demo/scenarios.py`: sửa chuỗi `tai_lieu` của th2, th3, th6, th7 theo IDEA.md mới (hiện trên giao diện ở mục "Con số trong tài liệu").
-3. `demo/README.md`: đổi mục "Chỗ lệch (xfail)" thành "Đã sửa trong IDEA.md sau khi mô phỏng" + cập nhật dòng kết quả test.
-4. Cập nhật mô tả PR #1 (mục Kiểm tra) cho khớp.
-5. Hỏi người dùng có muốn cập nhật `D3_Y_tuong_va_giai_phap.docx` cho khớp IDEA.md không (hiện docx là bản cũ).
+1. Chờ người dùng trả lời: có cập nhật `D3_Y_tuong_va_giai_phap.docx` cho khớp IDEA.md không (docx hiện là bản cũ).
+2. Theo dõi PR #1 (CI / review) nếu có sự kiện.

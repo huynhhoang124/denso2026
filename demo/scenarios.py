@@ -95,8 +95,9 @@ def kich_ban() -> dict[str, KichBan]:
             "10:00, M2 (Gia công) hỏng cần 4 giờ sửa; cùng lúc D1 (Dập) hỏng cần 3 giờ. Chỉ có một tổ bảo trì.",
             [Nhieu("M2", "nang_luc", -100, "10:00", 4, mo_ta="M2 hỏng"),
              Nhieu("D1", "nang_luc", -100, "10:00", 3, mo_ta="D1 hỏng")],
-            tai_lieu="Sửa M2 trước: 848 sp, B1 còn 12; sửa D1 trước: 792 sp, B1 còn 218 → chọn M2; "
-                     "tăng ca 1 giờ 20 vs 1 giờ 45.",
+            tai_lieu="Gia công lúc 16:00: sửa M2 trước 848 sp (B1 còn 12), sửa D1 trước 792 sp (B1 còn 218). "
+                     "Sau khi trả đệm về mục tiêu: ≈ 660 vs 792 → chọn sửa D1 trước; "
+                     "tăng ca ≈ 3 giờ (M2 trước) vs ≈ 1 giờ 45 (D1 trước); mức Vàng.",
         ),
         KichBan(
             "th3", "TH3: Lô linh kiện L-A về trễ 5 giờ",
@@ -109,7 +110,9 @@ def kich_ban() -> dict[str, KichBan]:
                 mo_ta="450 L-A về 11:00 (trước 11:20), 150 còn lại về 15:00",
                 chi_phi_them=0, xao_tron_them=1)],
             tai_lieu="11:20 kho L-A cạn, 12:05 B2 đầy, 12:55 B1 đầy; không làm gì mất 440; "
-                     "đổi thứ tự chỉ mất 80 (480 X + 400 Y); lô phải về trước 16:05; mức Vàng.",
+                     "đổi thứ tự chỉ mất 80 (480 X + 400 Y); lô phải về trước 16:05. Ngày mai 950 sp + 1 lần đổi mã "
+                     "(≈ 40 sp) = 990 > 960 → tăng ca ~40 phút hôm nay, hoặc đổi thứ tự + tăng tốc (không cần tăng ca); "
+                     "mức Vàng.",
         ),
         KichBan(
             "th4", "TH4: Khách chèn đơn gấp 300 sp",
@@ -121,7 +124,8 @@ def kich_ban() -> dict[str, KichBan]:
                 PhuongAn("B: Chỉ tăng ca", 4, ChinhSach(muc=1), mo_ta="Ca chính theo kế hoạch, làm 300 sp trong tăng ca"),
             ],
             bo_chung=True,
-            tai_lieu="A: đơn C xong 18:00 (2 giờ tăng ca + 6 giờ cao tải); B: xong 18:30 (2,5 giờ tăng ca); mức Vàng.",
+            tai_lieu="A: đơn C xong 18:00 (2 giờ tăng ca + 6 giờ cao tải); B: xong 18:30 (2,5 giờ tăng ca); "
+                     "kho L-A 1000 < 1260 → đặt gấp 260 L-A (trước 15:50 / 16:20); mức Vàng.",
         ),
         KichBan(
             "th5", "TH5: Lắp ráp thiếu 2/6 người",
@@ -135,7 +139,8 @@ def kich_ban() -> dict[str, KichBan]:
             "14:00, Kiểm tra cuối phát hiện 5 sp lỗi kích thước lỗ. Truy ngược trên bảng phả hệ tự tạo, "
             "khoanh vùng, rồi tính tác động: giữ hàng nghi lỗi + M3 dừng 1 giờ để kiểm tra.",
             [],  # điền sau khi truy vết (xem chay())
-            tai_lieu="Khoanh vùng 88 sp (thay vì ~600 cả lô S-77); thiếu 84 → tăng ca ~42 phút; "
+            tai_lieu="Khoanh vùng 88 sp (thay vì ~600 cả lô S-77); thiếu 88 + 26 = 114 sp (kho TP không dùng để giảm "
+                     "giờ tăng ca) → tăng ca ~57 phút, ~48 phút nếu tăng tốc; đặt gấp 48 L-A; "
                      "gợi ý hạ công suất tối đa M3 44 → 42; mức Vàng.",
         ),
         KichBan(
@@ -145,7 +150,7 @@ def kich_ban() -> dict[str, KichBan]:
             phuong_an_them=[PhuongAn("Giữ kế hoạch sản xuất", 1, ChinhSach(muc=1))],
             bo_chung=True,
             tai_lieu="Hàng đến khách 20:30, trễ 1,5 giờ; ghép chuyến 17:30 / thuê xe ngoài / báo khách; "
-                     "kiểm tra kho TP đầy; mức Đỏ.",
+                     "kiểm tra kho TP đầy; mức Vàng (thuê xe ngoài vẫn giữ đơn đúng hạn).",
         ),
     ]
     return {kb.ma: kb for kb in ds}

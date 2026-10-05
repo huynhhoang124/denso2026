@@ -16,7 +16,7 @@ Cần Python 3.10 trở lên.
 ```bash
 cd C:\denso2026\demo            # hoặc: cd denso2026/demo
 python -m pip install pandas networkx streamlit plotly pyyaml pytest
-python -m pytest -q             # 50 passed, 5 xfailed
+python -m pytest -q             # 58 passed
 streamlit run app.py            # mở http://localhost:8501
 ```
 
@@ -69,7 +69,7 @@ Nên dùng `python -m pytest` thay cho `pytest`, để chắc chắn test chạy
 
 ## Kết quả kiểm tra so với tài liệu
 
-`python -m pytest -q` cho **50 passed, 5 xfailed**. Engine không được chỉnh cho khớp số tài liệu. Những chỗ lệch được đánh dấu `xfail(strict=True)` kèm lý do: suite vẫn xanh, chỗ lệch vẫn được ghi lại, và nếu engine tình cờ ra đúng số tài liệu thì test sẽ báo.
+`python -m pytest -q` cho **58 passed**. Engine không được chỉnh cho khớp số tài liệu. Lần chạy đầu có 5 chỗ bản tính tay lệch mô phỏng (đánh dấu `xfail`); sau khi xem lại, IDEA.md đã được sửa theo mô phỏng (mục 10), và các test đó nay kiểm số mới.
 
 **Khớp tài liệu (mô phỏng bước 1 phút):**
 
@@ -77,24 +77,24 @@ Nên dùng `python -m pytest` thay cho `pytest`, để chắc chắn test chạy
 |---|---|
 | Ví dụ gốc | Không làm gì 800; chia tải + tăng tốc 884; tăng ca 38 phút; sửa 3/4/5/6 giờ → 930/884/838/792 sp và tăng ca 15/38/61/84 phút; Vàng |
 | TH1 | M1 = 45,96 ≈ 46, M2 = 44,04 ≈ 44; thiếu 10 sp, kho bù → Xanh; M3 hỏng hẳn 12:00 → 842 sp, tăng ca 89 phút ≈ 1,5 giờ |
-| TH2 | Sửa M2 trước: Gia công 848 sp, B1 còn 12. Sửa D1 trước: 792 sp, B1 còn 218, tăng ca 104 phút ≈ 1 giờ 45 |
-| TH3 | 11:20 L-A cạn, 12:05 B2 đầy, 12:55 B1 đầy; không làm gì mất 440; đổi thứ tự mất 80 (480 X + 400 Y); ngưỡng lô 16:05 |
+| TH2 | Sửa M2 trước: Gia công 848 sp, B1 còn 12, hiệu dụng 660, tăng ca 180 phút ≈ 3 giờ. Sửa D1 trước: 792 sp, B1 còn 218, tăng ca 104 phút ≈ 1 giờ 45 → chọn D1 trước |
+| TH3 | 11:20 L-A cạn, 12:05 B2 đầy, 12:55 B1 đầy; không làm gì mất 440; đổi thứ tự mất 80 (480 X + 400 Y), tăng ca 40 phút; đổi thứ tự + tăng tốc 0 phút; ngưỡng lô 16:05 |
 | TH4 | Đơn C xong 18:00 (A), 18:30 (B); engine tự phát hiện thiếu 260 L-A |
 | TH5 | 640 / 760 (tăng ca 2 giờ) / 880 (tăng ca 40 phút); B chỉ khả thi khi line 2 dư năng lực; cơ hội bảo dưỡng Gia công 08:00–10:00 |
-| TH6 | Truy ngược ra M3 + lô S-77; hai giả thuyết 600 và 88 sp; lấy mẫu S-77 trên M1/M2 ra 0 lỗi → giữ 88 sp; tính xuôi 846 sp |
-| TH7 | Hàng đến khách 20:30, trễ 1,5 giờ |
+| TH6 | Truy ngược ra M3 + lô S-77; hai giả thuyết 600 và 88 sp; lấy mẫu S-77 trên M1/M2 ra 0 lỗi → giữ 88 sp; tính xuôi 846 sp; tăng ca 57 phút (48 phút nếu tăng tốc); đặt gấp 48 L-A |
+| TH7 | Hàng đến khách 20:30, trễ 1,5 giờ; Vàng |
 
-**Chỗ lệch (xfail) và lý do:**
+**Đã sửa trong IDEA.md sau khi mô phỏng** (bản tính tay ban đầu → số mô phỏng, kèm lý do):
 
-1. **TH2: engine chọn sửa D1 trước, tài liệu chọn M2.** Sửa M2 trước cho Gia công 848 sp nhưng rút B1 từ 200 xuống 12. Áp đúng quy ước "đệm phải trả về mức mục tiêu" thì:
+1. **TH2: sửa D1 trước (bản tính tay chọn M2).** Sửa M2 trước cho Gia công 848 sp nhưng rút B1 từ 200 xuống 12. Áp đúng quy ước "đệm phải trả về mức mục tiêu" thì:
    - sửa M2 trước: sản lượng hiệu dụng khoảng 660, cần khoảng 180 phút tăng ca để vừa đủ kế hoạch vừa trả đệm;
    - sửa D1 trước: 792 sp, cần khoảng 104 phút.
 
-   Nguyên nhân: dây chuyền cân bằng (mọi công đoạn chuẩn 120 sp/h). D1 hỏng làm Dập hụt 50 sp/h, M2 hỏng chỉ làm Gia công hụt 28 sp/h. Đệm B1 chỉ hoãn thiệt hại của D1 sang sau 16:00, không xóa được nó. Tài liệu chỉ so sản lượng Gia công lúc 16:00. Giao diện hiện cả hai thước đo để đội quyết định.
-2. **TH2: tăng ca khi sửa M2 trước.** Tài liệu ghi 1 giờ 20, chỉ bù 112 sp ở Gia công và chưa trả B1 (thiếu 188). Engine ra khoảng 180 phút.
-3. **TH3: ngày mai "vừa một ca".** 450 X + 500 Y = 950 sp, nhưng hai mã cần một lần đổi mã 20 phút (bằng 40 sp) nên thành 990 > 960. Engine đề xuất khoảng 40 phút tăng ca hôm nay cho phương án đổi thứ tự. Phương án đổi thứ tự kết hợp tăng tốc thì không cần tăng ca.
-4. **TH6: tăng ca 42 phút.** Tài liệu trừ 30 sp kho thành phẩm ở TH6 (84 sp → 42 phút) nhưng không trừ ở mục 5 (76 sp → 38 phút); hai số này không thể cùng đúng. Engine dùng một quy ước cho mọi trường hợp (không trừ kho), nên ra 114 sp → 57 phút ở mức chia tải, 48 phút nếu có tăng tốc. Engine còn phát hiện thêm: giữ 88 sp làm nhu cầu L-A thành 1048 > 1000, nên phải đặt gấp 48 L-A.
-5. **TH7: mức Đỏ.** Có phương án giữ đơn đúng hạn (thuê xe ngoài, đến 18:30), nên theo định nghĩa ở mục 4.5 là Vàng. Bảng tổng hợp của tài liệu ghi Đỏ.
+   Nguyên nhân: dây chuyền cân bằng (mọi công đoạn chuẩn 120 sp/h). D1 hỏng làm Dập hụt 50 sp/h, M2 hỏng chỉ làm Gia công hụt 28 sp/h. Đệm B1 chỉ hoãn thiệt hại của D1 sang sau 16:00, không xóa được nó. Bản tính tay chỉ so sản lượng Gia công lúc 16:00. Giao diện hiện cả hai thước đo để đội quyết định.
+2. **TH2: tăng ca khi sửa M2 trước ≈ 3 giờ.** Bản tính tay ghi 1 giờ 20, chỉ bù 112 sp ở Gia công và chưa trả B1 (thiếu 188). Engine ra 180 phút.
+3. **TH3: ngày mai không "vừa một ca".** 450 X + 500 Y = 950 sp, nhưng hai mã cần một lần đổi mã 20 phút (bằng 40 sp) nên thành 990 > 960. Engine đề xuất khoảng 40 phút tăng ca hôm nay cho phương án đổi thứ tự. Phương án đổi thứ tự kết hợp tăng tốc thì không cần tăng ca.
+4. **TH6: tăng ca ≈ 57 phút (bản tính tay 42).** Bản tính tay trừ 30 sp kho thành phẩm ở TH6 (84 sp → 42 phút) nhưng không trừ ở mục 5 (76 sp → 38 phút); hai số này không thể cùng đúng. Engine dùng một quy ước cho mọi trường hợp (không trừ kho), nên ra 114 sp → 57 phút ở mức chia tải, 48 phút nếu có tăng tốc. Engine còn phát hiện thêm: giữ 88 sp làm nhu cầu L-A thành 1048 > 1000, nên phải đặt gấp 48 L-A.
+5. **TH7: mức Vàng (bản tính tay ghi Đỏ).** Có phương án giữ đơn đúng hạn (thuê xe ngoài, đến 18:30), nên theo định nghĩa ở mục 4.5 là Vàng.
 
 Hai lưu ý không làm đổi kết quả:
 
