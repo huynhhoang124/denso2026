@@ -158,8 +158,10 @@ Ghi chú tính tay ban đầu (đã khớp mô phỏng):
 ## Việc còn lại (cho phiên mới)
 
 1. Việc 4: kịch bản demo 5 phút + slide pitch (hỏi người dùng trước – ĐÃ HỎI ở phiên 3, chờ trả lời).
-2. Hỏi người dùng: có cập nhật IDEA.md/docx mục 7.1–7.3 bằng số mô phỏng không (ĐÃ HỎI ở phiên 3, chờ trả lời).
-   Gợi ý nội dung 7.3: thêm "quyết đổi thứ tự sau 14:20 còn kém hơn không làm gì".
+2. ~~Cập nhật IDEA.md/docx mục 7.1–7.3~~ XONG (phiên 3, người dùng đồng ý): 7.1 thêm bản đồ rủi ro (M3 đầu, LR-1 mất 330),
+   M1 → B2 150, B1 đủ, đệm dày không giảm tăng ca; 7.2 thay 87% minh họa bằng 42% mô phỏng (+38', 99,7%, D-101 100%);
+   7.3 thêm cách tính, mốc 14:20/14:40, TH4 B, lưu ý thời gian chuẩn bị; mục 10 thêm 1 dòng. Docx: sửa XML trực tiếp
+   (+4 đoạn), mục lục: 7.7–7.10 → 13, 9.3 → 15 (bản cũ ghi sai 13), 10 → 15, Nguồn → 16; vẫn 16 trang; validate PASSED.
 3. Có thể làm (nếu người dùng muốn): engine chọn thời điểm bắt đầu tăng tốc tốt nhất (TH1: đợi đến 10:00 được 960 thay
    vì 950) – đổi quy tắc muc 2, phải kiểm lại toàn bộ số tài liệu.
 4. Theo dõi PR #1 (CI / review).
