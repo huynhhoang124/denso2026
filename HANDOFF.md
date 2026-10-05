@@ -126,9 +126,35 @@ Ghi chú tính tay ban đầu (đã khớp mô phỏng):
   - Giao diện: Playwright 0 exception. Lưu ý: Chromium headless trong container có locale `en-US@posix` không hợp lệ
     → `st.time_input` báo RangeError (cả chế độ Tự nhập cũ); dùng `newContext({locale: 'vi-VN'})` khi kiểm tra.
 
+## Cập nhật phiên 2 (cuối)
+
+- CI GitHub Actions lần đầu: xanh (3.10 + 3.12). PR #1 chưa có review.
+- Người dùng: **KHÔNG đổi quy ước** "đệm phải trả về mục tiêu" (không tính bù đệm bằng năng lực dư ca sau). Chưa trả lời
+  việc cập nhật IDEA.md/docx mục 7.1–7.2 bằng số mô phỏng → hỏi lại.
+- Đang làm việc 2 – Đồng hồ quyết định (IDEA.md 7.3). ĐÃ XONG bước 1: `ChinhSach.tu` (phút bắt đầu áp dụng phương án;
+  trước `tu` chạy như muc 0, không đổi thứ tự). Mặc định 0 → 72 test cũ vẫn xanh.
+
 ## Việc còn lại (cho phiên mới)
 
-1. Theo dõi PR #1 (CI / review) – CI mới thêm, xem lần chạy đầu.
-2. Việc 2 trong đề xuất: "Đồng hồ quyết định" (IDEA.md 7.3) – thời điểm muộn nhất còn hiệu lực cho mỗi phương án.
-3. Việc 4: kịch bản demo 5 phút + slide pitch (sau khi người dùng duyệt).
-4. Hỏi người dùng: có tính bù đệm bằng năng lực dư ca sau không (xem phát hiện ở trên); có cập nhật IDEA.md/docx mục 7.1–7.2 bằng số mô phỏng không.
+1. **Việc 2 – Đồng hồ quyết định** (thiết kế đã chốt, chỉ cần code):
+   - `engine.py`: `dong_ho_quyet_dinh(dc, pt) -> pd.DataFrame` (hàm riêng, KHÔNG gọi trong `phan_tich` để test cũ không chậm).
+     Với mỗi phương án `r` trong `pt.phuong_an` (bỏ "Không làm gì"; phương án `kha_thi=False` ghi "không khả thi"):
+     - Kịch bản dùng `r["kq"].nhieu` (đã là lịch sửa tốt nhất ở TH2). Lúc phát hiện `t_inc` = min t0 của các nhiễu.
+     - Quyết định lúc `t_d`: `pa' = replace(pa, cs=replace(pa.cs, tu=t_d, hanh_dong=[hành động có t0 < t_d dời tới t_d]))`,
+       rồi `danh_gia(dc, nhieu, pa')` (đặt gấp linh kiện do danh_gia tự sinh, không dời).
+     - "Muộn nhất không mất gì" = t_d lớn nhất trong [t_inc, 16:00] mà sản lượng 16:00 ≥ S(t_inc) − 0,5 và
+       tăng ca đề xuất ≤ tăng ca lúc t_inc (None = ∞). Tìm nhị phân (giả định đơn điệu, ghi chú lại), bước 1 phút.
+     - "Sau đó mỗi phút chậm": (S(mốc) − S(mốc+30))/30 sp/phút và tăng ca thêm/phút.
+     - "Hết hiệu lực" = t_d lớn nhất mà vẫn `giu_don` (tìm nhị phân); None nếu ngay t_inc đã không giữ được.
+     - Cột: Phương án, Phát hiện lúc, Muộn nhất không mất gì, Còn (phút), Mỗi phút chậm mất (sp), Hết hiệu lực (giữ đơn).
+   - Số tài liệu để test (mục 7.3): TH3 "Đổi thứ tự sản xuất" mốc = 11:20 (±2 phút; kho L-A cạn), sau đó ≈ 2 sp/phút;
+     TH4 "A: Tăng tốc ca chính + tăng ca" mốc = 10:00 (phải quyết ngay). Kiểm tra thêm: TH3 "NCC tách lô" mốc 11:20.
+     Nếu mô phỏng ra khác → KHÔNG sửa code cho khớp, báo lại.
+   - `app.py`: mục "⏱ Đồng hồ quyết định" ngay sau bảng "So sánh phương án": bảng + câu nổi bật cho phương án đề xuất
+     ("phải quyết trước HH:MM, còn X phút kể từ lúc phát hiện"); biểu đồ timeline mỗi phương án: t_inc→mốc xanh
+     (không mất gì), mốc→hết hiệu lực vàng (vẫn giữ đơn, mất thêm), sau đó đỏ – dùng MAU_MUC, có nhãn chữ.
+     Cache bằng `st.cache_resource` theo mã kịch bản / khóa tự nhập. Kiểm tra Playwright với `newContext({locale: 'vi-VN'})`.
+   - Cập nhật README (mục mới + số test), HANDOFF; commit + push; báo người dùng.
+2. Việc 4: kịch bản demo 5 phút + slide pitch (hỏi người dùng trước).
+3. Hỏi người dùng: có cập nhật IDEA.md/docx mục 7.1–7.3 bằng số mô phỏng không.
+4. Theo dõi PR #1 (CI / review).

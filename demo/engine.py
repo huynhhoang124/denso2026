@@ -123,11 +123,13 @@ class ChinhSach:
     muc 0 – không làm gì: máy chạy chuẩn.
     muc 1 – chia tải: giữ nhịp kế hoạch, máy còn lại gánh theo tỷ lệ công suất tối đa.
     muc 2 – tăng tốc: chạy tới mức tối đa cho phép để đuổi kịp kế hoạch.
+    tu – phút bắt đầu áp dụng (quyết định chậm, mục 7.3); trước đó dây chuyền chạy như "không làm gì".
     """
 
     muc: int = 1
     doi_thu_tu: bool = False
     hanh_dong: list[Nhieu] = field(default_factory=list)
+    tu: int = 0
 
 
 # ---------------------------------------------------------------- lớp Logic
@@ -405,6 +407,8 @@ def mo_phong(dc: DayChuyen, nhieu: list[Nhieu] = (), cs: ChinhSach | None = None
 
     for t in range(N):
         trong_ca = t < dc.ca
+        muc = cs.muc if t >= cs.tu else 0
+        doi_thu_tu = cs.doi_thu_tu and t >= cs.tu
         for lk in lich:
             P[lk] += lich[lk].get(t, 0.0)
         for sp, sl in giu_luc.get(t, {}).items():
@@ -419,7 +423,7 @@ def mo_phong(dc: DayChuyen, nhieu: list[Nhieu] = (), cs: ChinhSach | None = None
             dang_doi -= 1
             if dang_doi == 0:
                 hien = dich
-        elif cs.doi_thu_tu:
+        elif doi_thu_tu:
             if hien != dc.sp_chinh and can_lam(dc.sp_chinh):
                 dang_doi, dich = dc.doi_ma, dc.sp_chinh
             elif not can_lam(hien):
@@ -444,14 +448,14 @@ def mo_phong(dc: DayChuyen, nhieu: list[Nhieu] = (), cs: ChinhSach | None = None
                 else:
                     chuan, toi_da = info["chuan"] * f * g, max(info["toi_da"] * g, info["chuan"] * f * g)
                     # công đoạn đang thiếu người (g < 1) không chạy nhanh hơn nhịp chuẩn của số người còn lại
-                    duoc_tang = cs.muc >= 1 and trong_ca and tren[m] < dc.tren_chuan_max and g >= 1 - EPS
+                    duoc_tang = muc >= 1 and trong_ca and tren[m] < dc.tren_chuan_max and g >= 1 - EPS
                     khoe.append((m, chuan, toi_da if duoc_tang else chuan, toi_da))
             tong_chuan = sum(k[1] for k in khoe)
-            if cs.muc == 0 or not trong_ca:
+            if muc == 0 or not trong_ca:
                 toc.update({m: chuan for m, chuan, _, _ in khoe})
             else:
                 muc_tieu = dc.nhip
-                if cs.muc == 2:
+                if muc == 2:
                     muc_tieu = max(muc_tieu, (yeu_cau - cum[s]) / max(dc.ca - t, 1) * 60)
                 can = muc_tieu - co_dinh
                 if can <= tong_chuan + EPS:
