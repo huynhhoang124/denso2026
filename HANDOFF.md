@@ -56,7 +56,15 @@ Phiên mới: đọc file này + `IDEA.md` (mục 2–6) rồi làm tiếp từ 
 14. TH7: tính riêng phần giao hàng (XE-A trễ +2h → đến 20:30, trễ 1,5h; ghép XE-GAN 40% chỗ = 200 sp; thuê xe ngoài; kiểm tra kho TP đầy).
 15. Sự cố nguồn cung: −100% trong [t0, t0+T) = các lô về trong khung bị dời tới cuối khung.
 
-## Chỗ lệch dự kiến (tính tay khi thiết kế – PHẢI xác nhận lại bằng mô phỏng)
+## Chỗ lệch (ĐÃ xác nhận bằng mô phỏng – 5 test xfail strict)
+
+Số khớp tài liệu: 800/884/38'/930-884-838-792/15-38-61-84'; TH1 46/44, thiếu 10, Xanh, 842, ~89'; TH2 848/792, B1 12/218,
+D1 trước 104' (≈1h45 ✓); TH3 440/80, 480X+400Y, 11:20/12:05/12:55, ngưỡng 16:05; TH4 18:00/18:30 (+ tự phát hiện thiếu 260 L-A,
+đặt trước 15:50 / 16:20); TH5 640/760 (OT 120')/880 (OT 40'), B không khả thi vì line 2, cửa sổ bảo trì 08–10;
+TH6 88 sp, lô S-77 600, mẫu 0 lỗi, 846 sp; TH7 đến 20:30 trễ 90'.
+Phát hiện thêm: TH6 giữ 88 sp làm tổng nhu cầu L-A 1048 > 1000 → engine đề xuất đặt gấp 48 L-A.
+
+Ghi chú tính tay ban đầu (đã khớp mô phỏng):
 
 - **TH2 – đảo kết luận**: theo quy ước "đệm phải trả về mục tiêu", sửa M2 trước làm B1 cạn còn 12 (thiếu 188 so với mục tiêu 200) → M ≈ 660 vs sửa D1 trước 792; tăng ca để hoàn thành kế hoạch + trả đệm: M2 trước ≈ 3h, D1 trước ≈ 1h44. Engine sẽ chọn D1. Lý do: dây chuyền cân bằng (mọi công đoạn chuẩn 120), D1 hỏng làm Dập hụt 50 sp/h, M2 hỏng làm Gia công hụt 28 sp/h; tài liệu chỉ nhìn sản lượng Gia công đến 16:00. Sản lượng Gia công 848/792 và B1 12/218 vẫn khớp tài liệu.
 - **TH6**: tăng ca 57' (114 sp ÷ 120) thay vì 42' – tài liệu trừ kho TP 30 ở TH6 nhưng không trừ ở mục 5 (38'). Hai số không thể cùng đúng.
@@ -69,9 +77,10 @@ Phiên mới: đọc file này + `IDEA.md` (mục 2–6) rồi làm tiếp từ 
 
 - [x] Cài thư viện (pip install pandas networkx streamlit plotly pyyaml pytest).
 - [x] `demo/config.yaml`
-- [ ] `demo/engine.py` (đồ thị, mô phỏng, phương án, mức cảnh báo, TTS, thứ tự sửa, truy vết, giao hàng, thông điệp từng bộ phận)
-- [ ] `demo/scenarios.py` (8 kịch bản + bảng phả hệ TH6)
-- [ ] `demo/tests/test_scenarios.py` → pytest xanh (lệch = xfail strict có lý do)
+- [x] `demo/engine.py` (đồ thị, mô phỏng, phương án, mức cảnh báo, TTS, thứ tự sửa, truy vết, giao hàng, thông điệp từng bộ phận)
+- [x] `demo/scenarios.py` (8 kịch bản + bảng phả hệ TH6; `chay(ma)` -> (PhanTich, phần riêng))
+- [x] `demo/tests/test_scenarios.py` → `python3 -m pytest -q demo`: 50 passed, 5 xfailed (5 chỗ lệch dưới đây)
+  (lưu ý: lệnh `pytest` trần trong container trỏ Python hệ thống thiếu thư viện → dùng `python3 -m pytest`)
 - [ ] `demo/app.py`
 - [ ] `demo/README.md`
 - [ ] Chạy streamlit + kiểm tra bằng trình duyệt (Playwright), chụp màn hình

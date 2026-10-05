@@ -53,10 +53,12 @@ san_pham:
 linh_kien:
   - id: L-A
     nha_cung_cap: NCC-1
+    dung_tai: LR
     ton_kho: 400
     lich_ve: [{gio: "10:00", so_luong: 600}]
   - id: L-B
     nha_cung_cap: NCC-2
+    dung_tai: LR
     ton_kho: 500
     lich_ve: []
 
