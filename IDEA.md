@@ -175,7 +175,7 @@ Máy dễ hỏng hơn chưa chắc phải lo trước; máy nào hỏng thì thi
 
 #### 4.7 Thời gian chịu đựng và thời gian phục hồi
 
-Thời gian chịu đựng của một đệm = mức đệm ÷ tốc độ thiếu hụt khi máy phía trước hỏng. So với thời gian sửa thường gặp của máy đó: nếu chịu đựng ≥ sửa, sự cố được đệm hấp thụ; ngược lại, thiệt hại chắc chắn xảy ra. Hai chỉ số này lấy từ phương pháp stress test chuỗi cung ứng (Time-to-Survive / Time-to-Recover) và dùng để xếp thứ tự sửa máy (trường hợp 2) và đề xuất mức đệm (mục 7.1).
+Thời gian chịu đựng của một đệm = mức đệm ÷ tốc độ thiếu hụt khi máy phía trước hỏng. So với thời gian sửa thường gặp của máy đó: nếu chịu đựng ≥ sửa, sự cố được đệm hấp thụ trong ca; ngược lại, thiệt hại chắc chắn xảy ra. Hai chỉ số này lấy từ phương pháp stress test chuỗi cung ứng (Time-to-Survive / Time-to-Recover) và dùng để sàng lọc nhanh thứ tự sửa máy (trường hợp 2) và đề xuất mức đệm (mục 7.1). Lưu ý: đệm hấp thụ chỉ là hoãn thiệt hại – phần đệm bị rút vẫn phải bù lại sau đó. Vì vậy thứ tự sửa cuối cùng được quyết định bằng mô phỏng, tính cả thời gian trả đệm về mức mục tiêu (xem trường hợp 2).
 
 #### 4.8 Truy vết ngược
 
@@ -271,19 +271,22 @@ Tình huống: 10:00, M2 (Gia công) hỏng, cần 4 giờ sửa. Cùng lúc D1 
 |---|---|---|
 | Lịch sửa | M2: 10–14; D1: 14–17 | D1: 10–13; M2: 13–17 |
 | Gia công | 10–14: 92 sp/h; 14–16: 120 sp/h | 10–16: 92 sp/h |
-| Đệm B1 lúc 16:00 | Còn 12 sp (chưa cạn) | Còn 218 sp |
-| Sản lượng ca | 848 (thiếu 112) | 792 (thiếu 168) |
-| Tăng ca | ≈ 1 giờ 20 phút; giờ đầu bị Dập giới hạn vì B1 gần cạn và D1 chưa sửa xong → Dập cũng phải tăng ca | ≈ 1 giờ 45 phút; giờ đầu M2 chưa sửa xong, chỉ chạy 80 sp/h |
+| Sản lượng Gia công lúc 16:00 | 848 (thiếu 112) | 792 (thiếu 168) |
+| Đệm B1 lúc 16:00 | Còn 12 sp – thiếu 188 so với mức mục tiêu 200 | Còn 218 sp (trên mục tiêu) |
+| Sản lượng ca sau khi trả đệm về mục tiêu | ≈ 660 | 792 |
+| Tăng ca để đủ kế hoạch và trả đệm về mục tiêu | ≈ 3 giờ: D1 sửa xong 17:00, giờ đầu Dập chỉ còn D2 60 sp/h; sau đó Dập chạy chuẩn 120 = nhịp chuyền nên B1 chỉ đầy lại được trong giờ tăng ca | ≈ 1 giờ 45 phút: giờ đầu M2 chưa sửa xong, Gia công chỉ chạy 80 sp/h |
 
-→ Sửa M2 trước: cứu thêm 56 sp và bớt khoảng 25 phút tăng ca.
+→ Sửa D1 trước: ít hơn khoảng 1 giờ 15 phút tăng ca. Nếu chỉ nhìn sản lượng Gia công lúc 16:00 thì sửa M2 trước có vẻ hơn (848 so với 792), nhưng phần hơn đó lấy từ đệm B1 (rút từ 200 xuống 12) và phải trả lại sau ca.
 
-Vì sao: so thời gian chịu đựng của đệm với thời gian sửa:
+Vì sao:
 
-- D1 hỏng, Dập còn 70 sp/h. Đệm B1 có 200 sp đỡ được khoảng 9 giờ (khi Gia công chạy 92) hoặc 4 giờ (khi Gia công chạy 120) – đều lâu hơn 3 giờ sửa D1 → D1 chờ được.
+- Thời gian chịu đựng cho thấy D1 chờ được *trong ca*: D1 hỏng, Dập còn 70 sp/h; đệm B1 200 sp đỡ được khoảng 9 giờ (Gia công chạy 92) hoặc 4 giờ (Gia công chạy 120) – lâu hơn 3 giờ sửa D1. Còn M2 thì không chờ được: Gia công thiếu 28 sp/h, đệm B2 60 sp chỉ đỡ khoảng 2 giờ, ngắn hơn 4 giờ sửa.
 
-- M2 hỏng, Gia công thiếu 28 sp/h so với Lắp ráp. Đệm B2 chỉ có 60 sp → đỡ được khoảng 2 giờ, ngắn hơn 4 giờ sửa M2 → M2 không chờ được.
+- Nhưng dây chuyền cân bằng (mọi công đoạn chuẩn 120 sp/h): mỗi giờ D1 hỏng, Dập hụt 50 sp; mỗi giờ M2 hỏng, Gia công chỉ hụt 28 sp. Đệm B1 chỉ dời thiệt hại của D1 sang sau 16:00. Khi tính cả việc trả đệm, máy hụt nhiều hơn mỗi giờ và sửa nhanh hơn (D1) nên được sửa trước.
 
-Điểm rút ra: thứ tự sửa quyết định bởi thiệt hại lan truyền, không phải thứ tự báo hỏng hay cảm tính.
+- Nếu ca sau Dập có thể chạy trên chuẩn (tối đa 140) để tự bù B1 mà không cần tăng ca thì khoảng cách giữa hai phương án hẹp lại. Hệ thống hiển thị cả hai thước đo để Bảo trì và Kế hoạch quyết định.
+
+Điểm rút ra: thứ tự sửa quyết định bởi thiệt hại lan truyền tính đến khi các đệm được trả về mức mục tiêu – không phải thứ tự báo hỏng, cảm tính, hay chỉ sản lượng cuối ca. (Kiểm chứng bằng mô phỏng ở bản demo; bản nháp tính tay trước đây chọn M2 vì chưa tính phần trả đệm B1.)
 
 #### Trường hợp 3: Lô linh kiện về trễ – sự cố lan ngược
 
@@ -308,7 +311,7 @@ Xử lý – đổi thứ tự sản xuất:
 
 | Bộ phận | Câu trả lời |
 |---|---|
-| Kế hoạch | Đổi thứ tự như trên. Ngày mai còn 450 X (D-102) + 500 Y (D-201) = 950 sp, vừa một ca – giữ trống kế hoạch ngày mai. |
+| Kế hoạch | Đổi thứ tự như trên. Ngày mai còn 450 X (D-102) + 500 Y (D-201) = 950 sp, cộng 1 lần đổi mã X → Y (20 phút ≈ 40 sp) = 990 sp > 960 → không vừa một ca. Hai cách: tăng ca khoảng 40 phút hôm nay để bù 80 sp, hoặc đổi thứ tự kết hợp tăng tốc Lắp ráp trong giới hạn cho phép (ca hôm nay đạt khoảng 920 sp, ngày mai vừa một ca, không cần tăng ca). |
 | Bảo trì | Làm bảo dưỡng định kỳ chuyền Lắp ráp ngay trong 2 lần đổi khuôn, không mất thêm giờ máy. |
 | Giao hàng & Sales | D-101 đủ: 480 X + 30 trong kho = 510 ≥ 500. Ngưỡng: D-101 cần thêm 70 sp X sau khi lô về (20 phút đổi khuôn + 35 phút chạy) → lô phải về trước 16:05. Lô đang báo 15:00, dư khoảng 1 giờ; nếu nhà cung cấp báo trễ thêm quá 16:05 → chuyển Đỏ. |
 | Phương án thay thế | Nhà cung cấp tách lô, gửi trước 450 cái bằng xe nhỏ trước 11:20 → không phải đổi thứ tự, nhưng tốn phí xe. Hệ thống đặt hai phương án cạnh nhau để chọn. |
@@ -334,7 +337,7 @@ Hệ thống hiểu: nhu cầu · +300 sp · hạn 20:00.
 
 - Bảo trì: không xếp bảo dưỡng chuyền Lắp ráp trong khung 10:00–18:30.
 
-- Kiểm tra chéo tự động: đơn C cần thêm 300 linh kiện L-A. Nếu kho không đủ, sự cố này tự sinh ra trường hợp 3 – hệ thống phát hiện được vì mọi thứ nằm trên cùng một bản đồ.
+- Kiểm tra chéo tự động: đơn C cần thêm 300 linh kiện L-A. Nếu kho không đủ, sự cố này tự sinh ra trường hợp 3 – hệ thống phát hiện được vì mọi thứ nằm trên cùng một bản đồ. Với số liệu của dây chuyền này (kho 400 + lô 600 = 1000 L-A, cần 960 + 300 = 1260) thì kho không đủ: phải đặt gấp 260 L-A, về trước 15:50 (phương án A) hoặc 16:20 (phương án B). Hai mốc 18:00 và 18:30 ở trên đều đã giả định có lô bổ sung này.
 
 Mức: Vàng. Điểm rút ra: hệ thống trả lời câu hỏi kinh doanh "nhận được không" kèm cái giá cụ thể, thay vì Sales phải hỏi vòng qua Kế hoạch.
 
@@ -367,7 +370,9 @@ Tình huống: 14:00, khâu Kiểm tra cuối phát hiện 5 sp lỗi kích thư
 
 - Khoanh vùng: hai giả thuyết – lỗi do vật liệu (cả lô S-77, khoảng 600 sp trên cả 3 máy) hoặc lỗi do máy (M3 trong 10:00–12:00, 88 sp). Hệ thống gợi ý lấy mẫu sản phẩm cùng lô S-77 nhưng chạy trên M1, M2 → 0 lỗi → nguyên nhân ở M3. Chỉ giữ lại 88 sp thay vì 600.
 
-- Tính xuôi: giữ 88 sp → đơn đang chạy thiếu 88; kho thành phẩm bù 30 → thiếu 58. M3 dừng 1 giờ để kiểm tra → M1, M2 chạy tối đa 94 sp/h → thiếu thêm 26. Tổng thiếu 84 → tăng ca khoảng 42 phút.
+- Tính xuôi: giữ 88 sp → đơn đang chạy thiếu 88. M3 dừng 1 giờ để kiểm tra → M1, M2 chạy tối đa 94 sp/h → thiếu thêm 26. Tổng thiếu 114 sp. Kho thành phẩm (30 sp) cũng là một đệm phải trả về mức mục tiêu nên không dùng để giảm giờ tăng ca (cùng quy ước với mục 5) → tăng ca khoảng 57 phút; nếu sau 15:00 cả ba máy chạy tăng tốc để đuổi kịp kế hoạch thì còn khoảng 48 phút. Kho thành phẩm vẫn được tính khi kiểm tra đơn: D-101 vẫn đủ.
+
+- Kiểm tra chéo linh kiện: làm bù 88 sp X nghĩa là cần 960 + 88 = 1048 L-A, trong khi cả ngày chỉ có 1000 → phải đặt gấp 48 L-A, về trước khoảng 16:20.
 
 - Vòng phản hồi: lỗi xuất hiện đúng lúc M3 chạy ở mức tối đa → gợi ý hạ công suất tối đa cho phép của M3 từ 44 xuống 42 và kiểm tra dao cụ; ghi nhận tỷ lệ lỗi khi chạy cao vào thông số máy.
 
@@ -387,17 +392,19 @@ Hệ thống hiểu: chuyến giao · thời gian · +2 giờ → hàng đến k
 
 Kiểm tra thêm: hàng chờ xe có làm kho thành phẩm đầy trước khi xe đến không? Nếu đầy, chuyền phải dừng – sự cố cuối chuỗi lan ngược vào tận nhà máy.
 
+Mức: Vàng – còn phương án giữ đơn đúng hạn (thuê xe ngoài chạy đúng giờ cũ, hàng đến 18:30). Chuyến 17:30 tuyến gần đến đúng 19:00, chỉ chở được khoảng 200/500 sp. Chỉ chuyển Đỏ nếu không có xe nào kịp, khi đó báo khách ngay và giao tách đợt.
+
 #### Tổng hợp: bảy trường hợp, một mô hình
 
 | # | Trường hợp | Loại thay đổi | Điều trường hợp này cho thấy | Mức |
 |---|---|---|---|---|
 | 1 | Máy chạy chậm | Năng lực −25% | Chia tải; chạy trước kịch bản xấu để cảnh báo sớm | Xanh |
-| 2 | Hai máy hỏng, một tổ bảo trì | Năng lực, 2 điểm | Ưu tiên sửa theo thiệt hại lan truyền | Vàng |
-| 3 | Lô linh kiện trễ | Nguồn cung | Lan ngược; đổi thứ tự; ngưỡng thời gian an toàn | Vàng |
+| 2 | Hai máy hỏng, một tổ bảo trì | Năng lực, 2 điểm | Ưu tiên sửa theo thiệt hại lan truyền, tính cả việc trả đệm về mục tiêu | Vàng |
+| 3 | Lô linh kiện trễ | Nguồn cung | Lan ngược; đổi thứ tự; ngưỡng thời gian an toàn; tính cả thời gian đổi mã ngày mai | Vàng |
 | 4 | Đơn gấp | Nhu cầu | Trả lời "nhận được không" kèm cái giá | Vàng |
 | 5 | Thiếu người | Năng lực (con người) | Giới hạn tăng ca; tài nguyên dùng chung; tận dụng năng lực nhàn rỗi | Vàng |
 | 6 | Hàng lỗi | Chất lượng → năng lực | Truy ngược khoanh vùng hẹp; tự chỉnh thông số | Vàng |
-| 7 | Xe trễ | Thời gian giao | Sự cố cuối chuỗi lan ngược về nhà máy | Đỏ |
+| 7 | Xe trễ | Thời gian giao | Sự cố cuối chuỗi lan ngược về nhà máy | Vàng |
 
 Cả bảy trường hợp dùng cùng một bản đồ và cùng một cách tính, chỉ khác dòng mô tả sự cố – đó là bằng chứng cho khả năng tổng quát hóa.
 
@@ -482,7 +489,7 @@ Mức độ phù hợp chủ đề: Data Utilization (nối dữ liệu bốn kh
 
 - Giới hạn tăng ca lấy theo Bộ luật Lao động 2019; cần đối chiếu quy định nội bộ của DENSO.
 
-- Mọi số liệu trong tài liệu là minh họa, tính tay; cần chạy lại bằng mô phỏng.
+- Mọi số liệu trong tài liệu là minh họa. Đã chạy lại bằng engine mô phỏng của bản demo (`demo/`, bước 1 phút): các con số khớp, trừ 5 chỗ đã sửa (xem mục 10).
 
 #### 9.2 Giới hạn đã biết
 
@@ -527,6 +534,16 @@ Các điểm đã được kiểm tra và chỉnh lại so với các bản nhá
 - Trích dẫn BTC: hai bản nháp ghi hai câu trích "nguyên văn" khác nhau – cần lấy lại đúng câu trên website trước khi dùng.
 
 - Số "sửa M3 cứu 200, sửa M7 cứu 40" trong tài liệu cũ là minh họa không cùng dây chuyền với tài liệu này – đã thay bằng ví dụ M2/M5 thống nhất.
+
+Kiểm chứng bằng mô phỏng (bản demo trong `demo/`, mỗi con số có một test). Năm chỗ sửa so với bản tính tay:
+
+- Trường hợp 2: đổi kết luận từ "sửa M2 trước" sang "sửa D1 trước". Sửa M2 trước rút đệm B1 xuống 12 (thiếu 188 so với mục tiêu), nên sau khi trả đệm chỉ còn khoảng 660 sp và cần khoảng 3 giờ tăng ca, so với 792 sp và 1 giờ 45 phút khi sửa D1 trước.
+- Trường hợp 2: giờ tăng ca khi sửa M2 trước đổi từ 1 giờ 20 thành khoảng 3 giờ. Bản cũ chỉ bù 112 sp ở Gia công, chưa bù B1.
+- Trường hợp 3: ngày mai 950 sp cộng 1 lần đổi mã (≈ 40 sp) = 990 > 960, không vừa một ca. Thêm hai cách xử lý: tăng ca khoảng 40 phút hôm nay, hoặc đổi thứ tự kết hợp tăng tốc.
+- Trường hợp 6: tăng ca đổi từ 42 phút thành khoảng 57 phút. Bản cũ trừ kho thành phẩm 30 sp ở đây nhưng không trừ ở mục 5; nay thống nhất không trừ (kho thành phẩm cũng là đệm phải trả về mục tiêu). Thêm kiểm tra chéo: phải đặt gấp 48 L-A.
+- Trường hợp 7: mức Đỏ đổi thành Vàng, vì vẫn còn phương án giữ đơn đúng hạn (thuê xe ngoài), đúng theo định nghĩa ở mục 4.5.
+- Bổ sung (không đổi con số): trường hợp 4 với kho L-A của dây chuyền này phải đặt gấp 260 L-A thì mới đạt 18:00 / 18:30.
+- Quy ước sản lượng áp dụng cho mọi đệm, kể cả kho thành phẩm: phần đệm bị rút dưới mục tiêu không được tính là sản lượng cứu được. Kho thành phẩm vẫn được dùng khi kiểm tra đơn hàng.
 
 ### Nguồn tham khảo
 

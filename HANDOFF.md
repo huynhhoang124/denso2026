@@ -5,9 +5,11 @@ Phiên mới: đọc file này + `IDEA.md` (mục 2–6) rồi làm tiếp từ 
 
 ## Prompt mở đầu cho phiên mới
 
-> Tiếp tục làm demo D3 trong repo `huynhhoang124/denso2026`, nhánh `claude/stoic-maxwell-8m9yp6`.
-> Đọc `HANDOFF.md` (yêu cầu, quyết định thiết kế, tiến độ) và `IDEA.md` mục 2–6, rồi làm tiếp các việc còn lại trong "Tiến độ".
-> Giữ đúng các quyết định thiết kế đã ghi; không sửa code để khớp số tài liệu – chỗ nào lệch thì ghi vào "Chỗ lệch" và báo lại.
+> Tiếp tục làm demo D3 trong repo `huynhhoang124/denso2026`, nhánh `claude/stoic-maxwell-8m9yp6` (PR draft https://github.com/huynhhoang124/denso2026/pull/1).
+> Đọc `HANDOFF.md` (yêu cầu, quyết định thiết kế, tiến độ, việc còn lại) và `IDEA.md` mục 2–6 + mục 10.
+> Cài thư viện: `pip install pandas networkx streamlit plotly pyyaml pytest`; chạy test bằng `python3 -m pytest -q demo`.
+> Gọi `subscribe_pr_activity` cho PR #1. Làm các việc trong mục "Việc còn lại" của HANDOFF.md, commit + push.
+> Giữ đúng các quyết định thiết kế; không sửa code để khớp số – chỗ nào lệch thì báo lại.
 > Khi context chạm ~500k token: dừng, cập nhật HANDOFF.md, commit + push, đưa lại prompt này.
 
 ## Yêu cầu gốc của người dùng (tóm tắt trung thành)
@@ -87,3 +89,19 @@ Ghi chú tính tay ban đầu (đã khớp mô phỏng):
 - [x] Cập nhật "Chỗ lệch" theo số mô phỏng thật
 - Quyết định thêm: Xanh = chỉ chia tải/tăng tốc (bậc ≤ 2), không tăng ca/đổi thứ tự; đơn gấp mã khác mã đang chạy → sinh phương án đổi thứ tự.
 - [x] Commit, push, draft PR https://github.com/huynhhoang124/denso2026/pull/1 (đã subscribe), báo cáo người dùng
+
+## Cập nhật phiên 1 (cuối)
+
+- [x] IDEA.md đã sửa theo 5 chỗ lệch (TH2 → sửa D1 trước, tăng ca M2 trước ≈ 3h; TH3 ngày mai 990 > 960 → tăng ca ~40' hoặc đổi thứ tự + tăng tốc;
+  TH6 → ~57' (48' nếu tăng tốc) + đặt gấp 48 L-A; TH7 → Vàng; mục 4.7, 9.1, 10, bảng tổng hợp). Thêm ghi chú TH4 đặt gấp 260 L-A.
+- Đã hủy lần tự kiểm tra PR (send_later) của phiên 1; phiên mới tự subscribe lại PR #1.
+
+## Việc còn lại (cho phiên mới)
+
+1. `demo/tests/test_scenarios.py`: 5 test xfail đang assert SỐ CŨ của tài liệu – nay IDEA.md đã đổi. Chuyển thành test thường theo số mới
+   (bỏ xfail, giữ lý do thành comment): TH2 hệ thống chọn D1 trước; TH2 M2 trước tăng ca ≈ 180' (±5); TH3 "Đổi thứ tự sản xuất" tăng ca ≈ 40'
+   và "Đổi thứ tự + tăng tốc" = 0'; TH6 tăng ca ≈ 57' (chia tải) / 48' (tăng tốc); TH7 mức Vàng (thêm vào bảng mức cảnh báo). Kỳ vọng: 55 passed.
+2. `demo/scenarios.py`: sửa chuỗi `tai_lieu` của th2, th3, th6, th7 theo IDEA.md mới (hiện trên giao diện ở mục "Con số trong tài liệu").
+3. `demo/README.md`: đổi mục "Chỗ lệch (xfail)" thành "Đã sửa trong IDEA.md sau khi mô phỏng" + cập nhật dòng kết quả test.
+4. Cập nhật mô tả PR #1 (mục Kiểm tra) cho khớp.
+5. Hỏi người dùng có muốn cập nhật `D3_Y_tuong_va_giai_phap.docx` cho khớp IDEA.md không (hiện docx là bản cũ).
