@@ -108,7 +108,11 @@ Ghi chú tính tay ban đầu (đã khớp mô phỏng):
 - [x] Streamlit + Playwright: 8 kịch bản, 0 exception, 0 lỗi JS; chuỗi "Con số trong tài liệu" mới hiển thị đúng.
 - [x] Cập nhật mô tả PR #1.
 
+- [x] Người dùng đồng ý → `D3_Y_tuong_va_giai_phap.docx` đã sửa theo IDEA.md (cùng các thay đổi của commit d4f5f49:
+  mục 4.7, TH2 bảng + kết luận, TH3, TH4, TH6, TH7 thêm dòng Mức Vàng, bảng tổng hợp, 9.1, 10). Sửa trực tiếp XML, giữ định dạng;
+  mục lục cập nhật số trang theo độ dời (LibreOffice render: 15 → 16 trang). Kiểm tra: validate.py PASSED, mọi dòng mới của IDEA.md có trong docx.
+  (Container cần `apt-get install libreoffice-writer` + `pip install defusedxml lxml` mới render/validate được.)
+
 ## Việc còn lại (cho phiên mới)
 
-1. Chờ người dùng trả lời: có cập nhật `D3_Y_tuong_va_giai_phap.docx` cho khớp IDEA.md không (docx hiện là bản cũ).
-2. Theo dõi PR #1 (CI / review) nếu có sự kiện.
+1. Theo dõi PR #1 (CI / review) nếu có sự kiện.
