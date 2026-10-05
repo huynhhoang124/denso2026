@@ -1,0 +1,79 @@
+# HANDOFF – Demo D3 Chain Impact Propagation
+
+File này để chuyển việc sang phiên Claude Code mới khi context đầy (~500k token).
+Phiên mới: đọc file này + `IDEA.md` (mục 2–6) rồi làm tiếp từ mục "Tiến độ".
+
+## Prompt mở đầu cho phiên mới
+
+> Tiếp tục làm demo D3 trong repo `huynhhoang124/denso2026`, nhánh `claude/stoic-maxwell-8m9yp6`.
+> Đọc `HANDOFF.md` (yêu cầu, quyết định thiết kế, tiến độ) và `IDEA.md` mục 2–6, rồi làm tiếp các việc còn lại trong "Tiến độ".
+> Giữ đúng các quyết định thiết kế đã ghi; không sửa code để khớp số tài liệu – chỗ nào lệch thì ghi vào "Chỗ lệch" và báo lại.
+> Khi context chạm ~500k token: dừng, cập nhật HANDOFF.md, commit + push, đưa lại prompt này.
+
+## Yêu cầu gốc của người dùng (tóm tắt trung thành)
+
+- App web local, Python 3.10+, CHỈ dùng: pandas, networkx, streamlit, plotly, pyyaml, pytest. Không DB, không Neo4j, không LLM.
+- Code trong `demo/` (người dùng ghi `C:\denso2026\demo\` – trên máy họ là repo clone ở C:\denso2026).
+- Ít file: `config.yaml`, `engine.py`, `scenarios.py`, `app.py`, `tests/`, `README.md` (cách chạy + hướng mở rộng: dữ liệu thật, Weibull, LLM, Neo4j).
+- config.yaml = bảng "Dây chuyền giả định" mục 6 (D1,D2 / B1 / M1–M3 / B2 / Lắp ráp 6 người / kho TP; L-A→X, L-B→Y; đơn D-101, D-102, D-201).
+- Lớp Logic = đồ thị networkx (máy, công đoạn, đệm, linh kiện, đơn hàng…, cạnh = quan hệ phụ thuộc).
+- Engine bước 1 phút, ca 08:00–16:00 + tăng ca. Sản lượng công đoạn = min(năng lực, đầu vào, chỗ trống đệm sau). Lan xuôi (đói hàng) + lan ngược (bị chặn). Quy tắc: trên chuẩn ≤ 6h/ca; tăng ca ≤ 4h/người/ngày; BOM; đổi mã 20 phút.
+- Sự cố = mẫu chung {điểm, đại lượng (năng lực/nguồn cung/nhu cầu/thời gian), thay đổi %, bắt đầu, thời lượng}. Tác động = mô phỏng có sự cố − mô phỏng kế hoạch.
+- Hành động = nhiễu tích cực, chạy lại engine. Thang: chia tải (theo tỷ lệ công suất tối đa) → tăng tốc → đổi thứ tự → tăng ca → chuyển line → báo khách. Tăng ca là khoảng theo thời gian sửa 3/4/5/6 giờ.
+- Mức Xanh/Vàng/Đỏ; thứ tự sửa máy theo thời gian chịu đựng đệm vs thời gian sửa; truy vết ngược trên bảng phả hệ tự tạo (TH6).
+- tests/test_scenarios.py – mỗi assert = 1 con số tài liệu:
+  - Ví dụ gốc: không làm gì 800; chia tải 884; tăng ca ~38'; sửa 3/4/5/6h → 930/884/838/792.
+  - TH1: M1=46, M2=44, Xanh; M3 hỏng hẳn 12:00 → 842.
+  - TH2: sửa M2 trước 848, D1 trước 792 → chọn M2.
+  - TH3: không làm gì mất 440; đổi thứ tự mất 80; ngưỡng lô 16:05.
+  - TH4: đơn C xong 18:00 (A), 18:30 (B).
+  - TH5: 760 và 880.
+  - TH6: khoanh vùng 88; tăng ca ~42'.
+  - Quy ước: sản lượng tính tại nút cổ chai, đệm phải trả về mức mục tiêu.
+  - **Nếu mô phỏng ra khác: KHÔNG sửa code cho khớp; báo chỗ lệch + giải thích.** (Cách làm: đánh dấu `pytest.mark.xfail(strict=True, reason=...)` để suite xanh nhưng vẫn ghi lại chỗ lệch.)
+- UI Streamlit 1 trang tiếng Việt: sidebar chọn 1 trong 8 kịch bản (ví dụ gốc + 7 TH) hoặc tự nhập sự cố; KPI (sản lượng/kế hoạch, thiếu, giờ tăng ca, mức cảnh báo có màu); Gantt (công đoạn dừng, đệm cạn/đầy); biểu đồ mức đệm; bảng so sánh phương án (cứu được, chi phí, xáo trộn); 3 tab Bảo trì / Kế hoạch / Giao hàng & Sales; sơ đồ dây chuyền tô đỏ điểm bị ảnh hưởng.
+- Thứ tự: engine + test trước, pytest xanh, rồi UI. Cuối cùng chạy `streamlit run app.py`, kiểm tra trên trình duyệt (Playwright/Chromium có sẵn ở /opt/pw-browsers), báo kết quả test + chỗ lệch.
+- Git: commit + push nhánh `claude/stoic-maxwell-8m9yp6`, tạo draft PR, subscribe PR.
+
+## Quyết định thiết kế (đã chốt)
+
+1. **Thước đo sản lượng M (sản lượng hiệu dụng)** = tổng sản lượng ra khỏi Lắp ráp − hàng bị giữ (chất lượng) + Σ_đệm min(0, mức đệm − mục tiêu).
+   Đây là cách viết tổng quát của quy ước "tính tại nút cổ chai + đệm phải trả về mục tiêu": phần đệm bị rút không được tính là sản lượng.
+   Kiểm tay: ví dụ gốc 884 ✓, TH3 520/880 ✓, TH5 640/760/880 ✓. Ngoài ra vẫn xuất sản lượng riêng từng công đoạn (vd. Gia công) để đối chiếu.
+2. **Mức chính sách (policy)**: 0 = không làm gì (máy chuẩn); 1 = chia tải (mục tiêu công đoạn = nhịp kế hoạch 120, máy còn lại chia theo tỷ lệ công suất tối đa, chỉ khi cần > tổng chuẩn; cắt ở max, water-filling); 2 = tăng tốc (mục tiêu = max(nhịp kế hoạch, cần còn lại / thời gian ca còn lại)).
+   Tài liệu dùng lẫn: mục 5 (884) là mức 2; TH1 (46/44) và TH2 (848/792, B1 còn 12/218) là mức 1. Test kiểm số ở đúng mức tài liệu dùng.
+3. Máy bị giảm năng lực một phần (TH1 M3=30) chạy cố định, không được tăng tốc. Máy hỏng = 0.
+4. Đếm giờ trên chuẩn: phút nào máy được lệnh > chuẩn VÀ công đoạn thực ra > tổng chuẩn các máy đang chạy. Giới hạn 360 phút/ca. Trong giờ tăng ca chỉ chạy chuẩn.
+5. Mỗi công đoạn dừng khi sản lượng cộng dồn ≥ kế hoạch ngày (+ phần bị giữ) → không sản xuất thừa, đệm tự trở về mục tiêu khi xong.
+6. Thứ tự tính trong 1 phút: từ cuối chuyền lên đầu (Lắp ráp lấy từ B2 trước, rồi Gia công đẩy vào chỗ trống).
+7. Đổi thứ tự (TH3): khi hết linh kiện mã đang chạy → đổi sang mã khác có linh kiện (20'); khi linh kiện mã chính về → đổi lại (20'). Y được kéo sớm cho D-201.
+8. Tăng ca: mô phỏng tiếp sau 16:00 ở tốc độ chuẩn (máy đang sửa vẫn dừng), tối đa 4h; giờ tăng ca = lúc M ≥ kế hoạch. **Không dùng kho TP để giảm giờ tăng ca** (kho TP cũng là đệm phải trả về mục tiêu) – nhưng kho TP được tính khi kiểm tra đơn hàng.
+9. Kiểm tra đơn: D-101 (hôm nay 17:00) = kho X + X làm được đến min(17:00, 16:00+OT) − hàng giữ ≥ 500. Đơn ngày mai: phần còn thiếu / 120 sp/h + 20' mỗi lần đổi mã (bắt đầu bằng mã cuối hôm nay) + thời gian bù đệm thiếu ≤ 480'.
+10. Mức cảnh báo: Xanh = mức 1 (chia tải) không tăng ca mà đơn vẫn đủ; Vàng = có phương án (tăng tốc/đổi thứ tự/tăng ca ≤4h/chuyển người) giữ được đơn; Đỏ = không phương án nào giữ được.
+11. Chọn phương án: trong các phương án giữ được đơn, ít giờ tăng ca nhất → bậc thang thấp hơn → chi phí thấp hơn.
+12. Nhu cầu gấp (TH4) = tăng kế hoạch ngày thêm 300, hạn 20:00; đơn C xong khi M ≥ 1260. Phương án A = mức 2 + tăng ca; B = mức 1 + tăng ca.
+13. TH6: bảng phả hệ tự tạo (seed cố định): 08–09 thép S-76, 09–14 S-77 (600 sp); 10–12 M1, M2 chạy 38 (thay dao luân phiên), M3 chạy 44 (tối đa) → tổng vẫn 120. Lỗi ẩn: chỉ M3 lúc chạy tối đa. Truy vết: thuộc tính chung → 2 giả thuyết (cả lô S-77 ≈600; M3 10–12 = 88) → lấy mẫu S-77 trên M1/M2 → 0 lỗi → giữ 88. Tính xuôi: giữ 88 lúc 14:00 + M3 dừng 14:00–15:00.
+14. TH7: tính riêng phần giao hàng (XE-A trễ +2h → đến 20:30, trễ 1,5h; ghép XE-GAN 40% chỗ = 200 sp; thuê xe ngoài; kiểm tra kho TP đầy).
+15. Sự cố nguồn cung: −100% trong [t0, t0+T) = các lô về trong khung bị dời tới cuối khung.
+
+## Chỗ lệch dự kiến (tính tay khi thiết kế – PHẢI xác nhận lại bằng mô phỏng)
+
+- **TH2 – đảo kết luận**: theo quy ước "đệm phải trả về mục tiêu", sửa M2 trước làm B1 cạn còn 12 (thiếu 188 so với mục tiêu 200) → M ≈ 660 vs sửa D1 trước 792; tăng ca để hoàn thành kế hoạch + trả đệm: M2 trước ≈ 3h, D1 trước ≈ 1h44. Engine sẽ chọn D1. Lý do: dây chuyền cân bằng (mọi công đoạn chuẩn 120), D1 hỏng làm Dập hụt 50 sp/h, M2 hỏng làm Gia công hụt 28 sp/h; tài liệu chỉ nhìn sản lượng Gia công đến 16:00. Sản lượng Gia công 848/792 và B1 12/218 vẫn khớp tài liệu.
+- **TH6**: tăng ca 57' (114 sp ÷ 120) thay vì 42' – tài liệu trừ kho TP 30 ở TH6 nhưng không trừ ở mục 5 (38'). Hai số không thể cùng đúng.
+- **TH3**: ngày mai 450 X + 500 Y = 950 sp + 1 lần đổi mã 20' (40 sp) → 990 > 960, không "vừa một ca" → cần ~40' tăng ca hôm nay.
+- **TH4**: kho L-A (400 + lô 600) = 1000 < 960 + 300 → engine tự phát hiện thiếu L-A (đúng như tài liệu dự báo); cần đặt gấp ~260 L-A trước ~15:51 (A) / ~16:20 (B). Test 18:00/18:30 chạy kèm hành động "đặt gấp L-A" do engine tự sinh.
+- **TH7**: có phương án giữ đơn đúng hạn → theo định nghĩa mục 4.5 là Vàng, tài liệu ghi Đỏ.
+- Mục 5: Gia công chạy 138 khung 14–16 > Lắp ráp max 130 (dư dồn vào B2) – không đổi M.
+
+## Tiến độ
+
+- [x] Cài thư viện (pip install pandas networkx streamlit plotly pyyaml pytest).
+- [x] `demo/config.yaml`
+- [ ] `demo/engine.py` (đồ thị, mô phỏng, phương án, mức cảnh báo, TTS, thứ tự sửa, truy vết, giao hàng, thông điệp từng bộ phận)
+- [ ] `demo/scenarios.py` (8 kịch bản + bảng phả hệ TH6)
+- [ ] `demo/tests/test_scenarios.py` → pytest xanh (lệch = xfail strict có lý do)
+- [ ] `demo/app.py`
+- [ ] `demo/README.md`
+- [ ] Chạy streamlit + kiểm tra bằng trình duyệt (Playwright), chụp màn hình
+- [ ] Cập nhật "Chỗ lệch" theo số mô phỏng thật
+- [ ] Commit, push, draft PR, subscribe PR, báo cáo người dùng
