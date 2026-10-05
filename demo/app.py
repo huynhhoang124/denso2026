@@ -8,8 +8,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from engine import (DAI_LUONG, DayChuyen, Nhieu, ban_do_rui_ro, de_xuat_muc_dem, dong_thoi_gian, gio,
-                    khoang_trang_thai, phan_tich, phut, thoi_luong, xac_suat_hoan_thanh)
+from engine import (DAI_LUONG, DayChuyen, Nhieu, ban_do_rui_ro, de_xuat_muc_dem, dong_ho_quyet_dinh,
+                    dong_thoi_gian, gio, khoang_trang_thai, phan_tich, phut, thoi_luong, xac_suat_hoan_thanh)
 from scenarios import chay, kich_ban
 
 st.set_page_config(page_title="D3 – Chain Impact Propagation", page_icon="🏭", layout="wide")
@@ -40,6 +40,16 @@ def chay_kich_ban(ma: str):
 def chay_tu_nhap(khoa: tuple):
     nhieu = [Nhieu(**dict(k)) for k in khoa]
     return phan_tich(day_chuyen(), nhieu), {}
+
+
+@st.cache_resource(show_spinner="Đang tính đồng hồ quyết định (chạy lại engine theo từng phút quyết định)…")
+def dong_ho_kich_ban(ma: str):
+    return dong_ho_quyet_dinh(day_chuyen(), chay_kich_ban(ma)[0])
+
+
+@st.cache_resource(show_spinner="Đang tính đồng hồ quyết định (chạy lại engine theo từng phút quyết định)…")
+def dong_ho_tu_nhap(khoa: tuple):
+    return dong_ho_quyet_dinh(day_chuyen(), chay_tu_nhap(khoa)[0])
 
 
 @st.cache_resource(show_spinner="Đang diễn tập từng máy hỏng…")
@@ -174,6 +184,7 @@ elif nguon == "Kịch bản có sẵn":
     ma = st.sidebar.selectbox("Chọn kịch bản", list(kbs), format_func=lambda m: kbs[m].ten)
     kb = kbs[ma]
     pt, rieng = chay_kich_ban(ma)
+    tinh_dong_ho = lambda: dong_ho_kich_ban(ma)  # noqa: E731
     tieu_de, tinh_huong, tai_lieu = kb.ten, kb.tinh_huong, kb.tai_lieu
 else:
     if "tu_nhap" not in st.session_state:
@@ -211,6 +222,7 @@ else:
         st.stop()
     khoa = tuple(tuple(sorted(x.items())) for x in st.session_state.tu_nhap)
     pt, rieng = chay_tu_nhap(khoa)
+    tinh_dong_ho = lambda: dong_ho_tu_nhap(khoa)  # noqa: E731
     tieu_de = "Sự cố tự nhập"
     tinh_huong = "Sự cố do người dùng mô tả theo mẫu chung – engine không có xử lý riêng cho loại sự cố này."
     tai_lieu = ""
@@ -339,6 +351,86 @@ if pt.giao_hang:
     st.markdown("**Phương án giao hàng**")
     st.dataframe(pd.DataFrame(pt.giao_hang["phuong_an"]).style.format({"Chi phí (VND)": "{:,.0f}"}),
                  use_container_width=True, hide_index=True)
+
+# ---------------------------------------------------------------- đồng hồ quyết định
+st.subheader("⏱ Đồng hồ quyết định – phải quyết muộn nhất lúc nào?")
+dh = tinh_dong_ho()
+
+
+def _gio(v) -> str:
+    return "–" if pd.isna(v) else gio(int(v))
+
+
+def _so(x: float) -> str:
+    return f"{x:g}".replace(".", ",")
+
+
+if dh.empty:
+    st.info("Sự cố này không làm thay đổi dòng chảy sản xuất nên không có mốc quyết định cho sản xuất"
+            + (" – xem mốc của chuyến giao ở bảng phương án giao hàng." if pt.giao_hang else "."))
+else:
+    if dx is not None and dx["pa"].ten in set(dh["Phương án"]):
+        r = dh.set_index("Phương án").loc[dx["pa"].ten]
+        moc, con = int(r["Muộn nhất không mất gì"]), int(r["Còn (phút)"])
+        if "như nhau" in r["Ghi chú"]:
+            cau = (f"Phương án đề xuất **{dx['pa'].ten}**: không gấp – quyết lúc nào trong ca cũng cho cùng kết quả.")
+        else:
+            cau = (f"Phương án đề xuất **{dx['pa'].ten}**: "
+                   + (f"**phải quyết ngay** lúc phát hiện ({_gio(r['Phát hiện lúc'])})" if con == 0 else
+                      f"phải quyết **chậm nhất {gio(moc)}** – còn **{con} phút** kể từ lúc phát hiện "
+                      f"({_gio(r['Phát hiện lúc'])})")
+                   + f". Sau đó mỗi phút chậm mất ~{_so(r['Mỗi phút chậm mất (sp)'])} sp"
+                   + (f" và thêm ~{_so(r['Mỗi phút chậm thêm tăng ca (phút)'])} phút tăng ca"
+                      if pd.notna(r["Mỗi phút chậm thêm tăng ca (phút)"]) else "")
+                   + (f"; vẫn giữ được đơn nếu quyết chậm nhất {_gio(r['Hết hiệu lực (giữ đơn)'])}."
+                      if pd.notna(r["Hết hiệu lực (giữ đơn)"]) and r["Hết hiệu lực (giữ đơn)"] < dc.ca
+                      else "; quyết trong ca vẫn giữ được đơn (bù bằng tăng ca)."))
+        st.warning(cau, icon="⏱")
+
+    # dòng thời gian từng phương án: xanh = không mất gì, vàng = vẫn giữ đơn nhưng mất thêm, đỏ = hết giữ đơn
+    doan = []
+    for _, r in dh.iterrows():
+        t0 = int(r["Phát hiện lúc"])
+        if pd.isna(r["Muộn nhất không mất gì"]):
+            doan.append((r["Phương án"], t0, dc.ca, "không khả thi"))
+            continue
+        moc = int(r["Muộn nhất không mất gì"])
+        het = dc.ca if pd.isna(r["Hết hiệu lực (giữ đơn)"]) else int(r["Hết hiệu lực (giữ đơn)"])
+        doan += [(r["Phương án"], t0, moc, "không mất gì"), (r["Phương án"], moc, het, "vẫn giữ đơn, mất thêm"),
+                 (r["Phương án"], het, dc.ca, "hết giữ đơn")]
+    d = pd.DataFrame(doan, columns=["Phương án", "Từ", "Đến", "Nếu quyết trong khoảng này"])
+    d = d[d["Đến"] > d["Từ"]].copy()
+    d["Bắt đầu"], d["Kết thúc"] = d["Từ"].map(dt), d["Đến"].map(dt)
+    d["Khoảng"] = d["Từ"].map(gio) + "–" + d["Đến"].map(gio)
+    d["Nhãn"] = d.apply(lambda x: x["Nếu quyết trong khoảng này"] if x["Đến"] - x["Từ"] >= 45 else "", axis=1)
+    mau = {"không mất gì": MAU_MUC["Xanh"], "vẫn giữ đơn, mất thêm": MAU_MUC["Vàng"],
+           "hết giữ đơn": MAU_MUC["Đỏ"], "không khả thi": "#9e9e9e"}
+    fig = px.timeline(d, x_start="Bắt đầu", x_end="Kết thúc", y="Phương án", color="Nếu quyết trong khoảng này",
+                      color_discrete_map=mau, text="Nhãn",
+                      hover_data={"Khoảng": True, "Bắt đầu": False, "Kết thúc": False, "Nhãn": False},
+                      category_orders={"Phương án": list(dh["Phương án"]),
+                                       "Nếu quyết trong khoảng này": list(mau)})
+    fig.update_traces(textposition="inside", insidetextanchor="middle", marker_line_color="white",
+                      marker_line_width=2)
+    for _, r in dh.iterrows():
+        if pd.notna(r["Muộn nhất không mất gì"]) and r["Muộn nhất không mất gì"] < dc.ca:
+            fig.add_annotation(x=dt(int(r["Muộn nhất không mất gì"])), y=r["Phương án"],
+                               text=f"⏱ {_gio(r['Muộn nhất không mất gì'])}", showarrow=False, yshift=24,
+                               font=dict(size=11))
+    fig.update_layout(height=120 + 70 * len(dh), margin=dict(l=10, r=10, t=30, b=10), legend_title_text="",
+                      legend=dict(orientation="h", y=-0.15), uniformtext=dict(minsize=11, mode="hide"),
+                      yaxis_title=None, bargap=0.45,
+                      xaxis=dict(tickformat="%H:%M", range=[dt(int(dh["Phát hiện lúc"].min()) - 15), dt(dc.ca + 5)]))
+    st.plotly_chart(fig, use_container_width=True)
+
+    hien = dh.copy()
+    for c in ("Phát hiện lúc", "Muộn nhất không mất gì", "Hết hiệu lực (giữ đơn)"):
+        hien[c] = hien[c].map(_gio)
+    st.dataframe(hien, use_container_width=True, hide_index=True)
+    st.caption("Quyết lúc t = trước t dây chuyền chạy như không làm gì, hành động lẽ ra làm sớm hơn dời tới t "
+               "(không tính thời gian chuẩn bị). Không mất gì = sản lượng 16:00, giờ tăng ca và đơn hàng như khi "
+               "quyết ngay lúc phát hiện. Mỗi phút chậm = trung bình 30 phút sau mốc. Hết hiệu lực = lần đầu "
+               "không còn giữ được đơn kể cả tăng ca tối đa 4 giờ.")
 
 # ---------------------------------------------------------------- 3 bộ phận
 st.subheader("Câu trả lời cho từng bộ phận")
