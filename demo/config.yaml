@@ -1,0 +1,103 @@
+# Dây chuyền giả định – lấy đúng bảng "Dây chuyền giả định" ở mục 6 của IDEA.md.
+# Các dòng ghi "giả định demo" là thông số tài liệu không nêu, nhóm tự đặt để engine chạy được.
+
+ca:
+  bat_dau: "08:00"
+  ket_thuc: "16:00"            # tăng ca sau 16:00
+  gio_tren_chuan_toi_da: 6     # máy chạy trên chuẩn tối đa 6 giờ/ca
+  tang_ca_toi_da_gio: 4        # mỗi người tăng ca tối đa 4 giờ/ngày
+  doi_ma_phut: 20              # mỗi lần đổi mã mất 20 phút
+  thoi_gian_xuyen_chuyen_phut: 20   # Lắp ráp, Đóng gói chạy thêm sau Gia công (mục 5)
+
+ke_hoach:
+  san_pham: X
+  so_luong: 960                # 120 sp/h × 8 giờ
+
+# Thứ tự dòng chảy: DAP -> B1 -> GC -> B2 -> LR -> kho thành phẩm
+cong_doan:
+  - id: DAP
+    ten: Dập
+    so_nguoi: 2                # giả định demo (dùng để tính chi phí tăng ca)
+    may:
+      - {id: D1, chuan: 60, toi_da: 70, sua_gio: 3, hong_trong_ca: 0.04}
+      - {id: D2, chuan: 60, toi_da: 70, sua_gio: 3, hong_trong_ca: 0.04}
+  - id: GC
+    ten: Gia công
+    so_nguoi: 3                # giả định demo
+    may:
+      - {id: M1, chuan: 40, toi_da: 48, sua_gio: 4, hong_trong_ca: 0.05}
+      - {id: M2, chuan: 40, toi_da: 46, sua_gio: 4, hong_trong_ca: 0.05}
+      - {id: M3, chuan: 40, toi_da: 44, sua_gio: 4, hong_trong_ca: 0.10}     # máy cũ
+  - id: LR
+    ten: Lắp ráp
+    so_nguoi: 6                # năng lực tỷ lệ với số người có mặt
+    may:
+      - {id: LR-1, ten: Chuyền lắp ráp, chuan: 120, toi_da: 130, sua_gio: 2, hong_trong_ca: 0.03}
+
+dem:
+  - {id: B1, ten: "Đệm B1", tu: DAP, den: GC, hien_tai: 200, muc_tieu: 200, suc_chua: 300}
+  - {id: B2, ten: "Đệm B2", tu: GC, den: LR, hien_tai: 60, muc_tieu: 60, suc_chua: 150}
+
+kho_thanh_pham:
+  id: FG
+  ten: Kho thành phẩm
+  hien_tai: {X: 30, Y: 0}
+  muc_tieu: 30
+  suc_chua: 1200               # giả định demo (dùng cho kiểm tra TH7)
+
+san_pham:
+  # X và Y dùng chung Dập và Gia công; chỉ khác linh kiện ở Lắp ráp (định mức 1 linh kiện/sp)
+  - {id: X, linh_kien: L-A, dinh_muc: 1}
+  - {id: Y, linh_kien: L-B, dinh_muc: 1}
+
+linh_kien:
+  - id: L-A
+    nha_cung_cap: NCC-1
+    dung_tai: LR
+    ton_kho: 400
+    lich_ve: [{gio: "10:00", so_luong: 600}]
+  - id: L-B
+    nha_cung_cap: NCC-2
+    dung_tai: LR
+    ton_kho: 500
+    lich_ve: []
+
+don_hang:
+  - {id: D-101, khach: A, san_pham: X, so_luong: 500, ngay: 0, han: "17:00", chuyen: XE-A}
+  - {id: D-102, khach: A, san_pham: X, so_luong: 460, ngay: 1}   # khách: giả định demo
+  - {id: D-201, khach: B, san_pham: Y, so_luong: 900, ngay: 1}
+
+chuyen_giao:
+  - {id: XE-A, gio_di: "17:00", duong_gio: 1.5, khach: A, han_den: "19:00", suc_chua: 500}
+  - {id: XE-GAN, ten: "Chuyến 17:30 tuyến gần", gio_di: "17:30", duong_gio: 1.5, suc_chua: 500, con_trong: 0.4}
+
+# Line 2 – chỉ dùng để kiểm tra khi mượn người (TH5). Giả định demo:
+# 6 người × 20 sp/h = 120 sp/h, kế hoạch 100 sp/h -> cho mượn 1 người vẫn đủ, 2 người thì không.
+line_2:
+  so_nguoi: 6
+  nang_suat_moi_nguoi: 20
+  ke_hoach_sp_gio: 100
+  nguoi_da_ky_nang: 2
+
+# Phân bố thời gian sửa (xác suất cộng dồn "sửa xong trong ≤ h giờ"), số minh họa ở mục 5.
+# Độ lệch so với thời gian dự kiến của Bảo trì.
+phan_bo_sua:
+  - {lech_gio: -1, xac_suat_cong_don: 0.20}
+  - {lech_gio: 0, xac_suat_cong_don: 0.50}
+  - {lech_gio: 1, xac_suat_cong_don: 0.80}
+  - {lech_gio: 2, xac_suat_cong_don: 0.95}
+muc_dang_ky_tang_ca: 0.80     # đăng ký trước lượng tăng ca đủ cho 80% khả năng
+
+# Diễn tập đầu ca (mục 7.1–7.2) – giả định demo, thay bằng thống kê phiếu sửa chữa khi có dữ liệu thật:
+# mỗi máy có `sua_gio` (thời gian sửa thường gặp) và `hong_trong_ca` (xác suất hỏng trong một ca).
+# Ngoài hỏng hẳn còn có dừng ngắn (kẹt phôi, chờ vật tư…) mà engine không biết trước.
+dung_ngan: {xac_suat_moi_may: 0.30, phut_min: 5, phut_max: 30}
+
+# Đơn giá để quy đổi phương án ra tiền – toàn bộ là giả định demo (VND).
+chi_phi:
+  tang_ca_nguoi_gio: 75000
+  hao_mon_may_gio_tren_chuan: 30000
+  doi_ma_lan: 200000
+  xe_nho_ncc: 1500000
+  thue_xe_ngoai: 3000000
+  phat_tre_don_gio: 2000000
