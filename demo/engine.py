@@ -1195,6 +1195,78 @@ def phan_tich(dc: DayChuyen, nhieu: list[Nhieu], phuong_an_them: list[PhuongAn] 
     return pt
 
 
+# ---------------------------------------------------------------- đồng hồ quyết định (mục 7.3)
+def _quyet_luc(dc: DayChuyen, nhieu: list[Nhieu], pa: PhuongAn, t_d: int, kq_goc: KetQua) -> dict:
+    """Đánh giá phương án `pa` khi quyết định lúc `t_d`: trước đó dây chuyền chạy như không làm gì,
+    hành động định làm trước `t_d` bị dời tới `t_d`. Đặt gấp linh kiện do `danh_gia` tự sinh lại theo kết quả mới."""
+    hd = [n if n.t0 >= t_d else replace(n, bat_dau=t_d) for n in pa.cs.hanh_dong if not n.mo_ta.startswith("Đặt gấp")]
+    return danh_gia(dc, nhieu, replace(pa, cs=replace(pa.cs, tu=t_d, hanh_dong=hd)), kq_goc)
+
+
+def _lon_nhat(dung, a: int, b: int) -> int | None:
+    """t lớn nhất trong [a, b] mà dung(t) đúng, giả định đúng rồi sai (đơn điệu); None nếu dung(a) sai."""
+    if not dung(a):
+        return None
+    if dung(b):
+        return b
+    while b - a > 1:
+        m = (a + b) // 2
+        a, b = (m, b) if dung(m) else (a, m)
+    return a
+
+
+def dong_ho_quyet_dinh(dc: DayChuyen, pt: PhanTich, buoc: int = 30) -> pd.DataFrame:
+    """Với mỗi phương án: quyết muộn nhất lúc nào mà không mất gì, sau đó mỗi phút chậm mất bao nhiêu,
+    và đến lúc nào phương án hết giữ được đơn. Tìm nhị phân theo phút, giả định kết quả xấu dần khi quyết muộn
+    (đúng với các phương án hiện có: quyết muộn chỉ bớt thời gian áp dụng)."""
+    goc = pt.khong_lam_gi["kq"]
+    dong = []
+    for r in pt.phuong_an:
+        pa = r["pa"]
+        if pa.bac == 0:
+            continue
+        nhieu = r["kq"].nhieu
+        t_inc = min((n.t0 for n in pt.nhieu), default=0)
+        hang = {"Phương án": pa.ten, "Phát hiện lúc": gio(t_inc)}
+        if not pa.kha_thi:
+            dong.append({**hang, "Muộn nhất không mất gì": "không khả thi", "Còn (phút)": None,
+                         "Mỗi phút chậm mất (sp)": None, "Mỗi phút chậm thêm tăng ca (phút)": None,
+                         "Hết hiệu lực (giữ đơn)": None, "_moc": None, "_het": None, "_t_inc": t_inc})
+            continue
+        bo_nho: dict[int, dict] = {}
+
+        def kq_luc(t):
+            if t not in bo_nho:
+                bo_nho[t] = _quyet_luc(dc, nhieu, pa, t, goc)
+            return bo_nho[t]
+
+        dau = kq_luc(t_inc)
+        tc_dau = dau["tang_ca_de_xuat"]
+
+        def khong_mat(t):
+            x = kq_luc(t)
+            tc = x["tang_ca_de_xuat"]
+            tc_ok = tc_dau is None or (tc is not None and tc <= tc_dau)
+            return x["san_luong"] >= dau["san_luong"] - 0.5 and tc_ok
+
+        moc = _lon_nhat(khong_mat, t_inc, dc.ca)
+        het = _lon_nhat(lambda t: kq_luc(t)["giu_don"], t_inc, dc.ca)
+        sau = min(moc + buoc, dc.ca)
+        mat = tc_them = None
+        if sau > moc:
+            a, b = kq_luc(moc), kq_luc(sau)
+            mat = (a["san_luong"] - b["san_luong"]) / (sau - moc)
+            if a["tang_ca_de_xuat"] is not None and b["tang_ca_de_xuat"] is not None:
+                tc_them = (b["tang_ca_de_xuat"] - a["tang_ca_de_xuat"]) / (sau - moc)
+        dong.append({**hang, "Muộn nhất không mất gì": gio(moc), "Còn (phút)": moc - t_inc,
+                     "Mỗi phút chậm mất (sp)": None if mat is None else round(mat, 1),
+                     "Mỗi phút chậm thêm tăng ca (phút)": None if tc_them is None else round(tc_them, 2),
+                     "Hết hiệu lực (giữ đơn)": ("còn cả ca" if het == dc.ca else gio(het)) if het is not None
+                     else "không giữ được đơn",
+                     "_moc": moc, "_het": het, "_t_inc": t_inc})
+    return pd.DataFrame(dong)
+
+
 # ---------------------------------------------------------------- câu trả lời cho từng bộ phận
 def thong_diep(dc: DayChuyen, pt: PhanTich) -> dict[str, list[str]]:
     bt, kh, gh = [], [], []
