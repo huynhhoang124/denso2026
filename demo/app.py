@@ -8,8 +8,8 @@ import plotly.express as px
 import plotly.graph_objects as go
 import streamlit as st
 
-from engine import (DAI_LUONG, DayChuyen, Nhieu, dong_thoi_gian, gio, khoang_trang_thai, phan_tich, phut,
-                    thoi_luong)
+from engine import (DAI_LUONG, DayChuyen, Nhieu, ban_do_rui_ro, de_xuat_muc_dem, dong_thoi_gian, gio,
+                    khoang_trang_thai, phan_tich, phut, thoi_luong, xac_suat_hoan_thanh)
 from scenarios import chay, kich_ban
 
 st.set_page_config(page_title="D3 – Chain Impact Propagation", page_icon="🏭", layout="wide")
@@ -42,14 +42,135 @@ def chay_tu_nhap(khoa: tuple):
     return phan_tich(day_chuyen(), nhieu), {}
 
 
+@st.cache_resource(show_spinner="Đang diễn tập từng máy hỏng…")
+def dien_tap_may(luc: str):
+    return ban_do_rui_ro(day_chuyen(), luc), de_xuat_muc_dem(day_chuyen(), luc)
+
+
+@st.cache_resource(show_spinner="Đang chạy kế hoạch ca qua nhiều kịch bản rủi ro…")
+def dien_tap_ca(so_lan: int, seed: int):
+    return xac_suat_hoan_thanh(day_chuyen(), so_lan, seed)
+
+
+MAU_SERIES = "#2a78d6"   # một chuỗi số liệu → một màu
+NHOM_TC = [("0 (trong ca)", 0, 0), ("1–15", 1, 15), ("16–30", 16, 30), ("31–60", 31, 60), ("61–120", 61, 120),
+           ("121–240", 121, 240)]
+
+
+def pt_tram(p: float) -> str:
+    """Phần trăm; giữ 1 chữ số lẻ khi làm tròn sẽ thành 0% hoặc 100% sai lệch."""
+    return f"{p:.1%}" if 0 < p < 1 and f"{p:.0%}" in ("0%", "100%") else f"{p:.0%}"
+
+
+def trang_dau_ca():
+    """Diễn tập đầu ca (IDEA.md mục 7.1–7.2): chạy trước khi có sự cố."""
+    st.sidebar.caption("Mỗi sáng, trước 08:00: thử lần lượt từng máy hỏng, rồi chạy kế hoạch ca qua nhiều kịch bản "
+                       "rủi ro rút ngẫu nhiên (hỏng máy, sửa lệch dự kiến, dừng ngắn).")
+    luc = st.sidebar.time_input("Giả định máy hỏng lúc (bản đồ rủi ro)", time(10, 0), step=timedelta(minutes=30))
+    so_lan = st.sidebar.select_slider("Số kịch bản rủi ro", [100, 300, 500, 1000], value=300)
+    seed = int(st.sidebar.number_input("Hạt giống ngẫu nhiên", 1, 9999, 7))
+    bd, dem = dien_tap_may(luc.strftime("%H:%M"))
+    mc = dien_tap_ca(so_lan, seed)
+
+    st.title("Diễn tập đầu ca – trước khi vào ca 08:00")
+    st.write(f"Kế hoạch ca {dc.ke_hoach} sp mã {dc.sp_chinh}. Engine chạy kế hoạch qua {mc['so_lan']} kịch bản rủi ro "
+             "(mỗi rủi ro là một nhiễu theo mẫu chung) với cách phản ứng chia tải + tăng tốc, rồi thử riêng từng máy hỏng.")
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Xác suất đủ kế hoạch trong ca", pt_tram(mc['p_trong_ca']))
+    k1.caption("Không cần tăng ca, các đệm đã trả về mục tiêu.")
+    dk = mc["dang_ky_tang_ca"]
+    k2.metric(f"Nên đăng ký tăng ca dự phòng", thoi_luong(dk) if dk is not None else "> 4 giờ")
+    k2.caption(f"Đủ cho {mc['muc_dang_ky']:.0%} số kịch bản.")
+    k3.metric("Đủ kế hoạch nếu tăng ca ≤ 4 giờ", pt_tram(mc['p_trong_gioi_han']))
+    k3.caption("Phần còn lại phải chuyển ca sau / line khác.")
+    k4.metric("Đơn hôm nay kịp hạn", pt_tram(mc['p_don_hom_nay']))
+    k4.caption("D-101 (xe 17:00), có tính kho thành phẩm.")
+    if mc["p_trong_ca"] < 0.8:
+        st.info(f"Kế hoạch {dc.ke_hoach} sp bằng đúng 100% công suất chuẩn ({dc.nhip:.0f} sp/h × 8 giờ): sự cố hay dừng "
+                "ngắn sát cuối ca không còn thời gian để tăng tốc bù, nên nhiều kịch bản cần vài phút tăng ca.", icon="ℹ️")
+
+    tc = mc["bang"]["Tăng ca cần (phút)"]
+    nhan = [n for n, _, _ in NHOM_TC] + ["> 4 giờ"]
+    ti_le = [((tc >= a) & (tc <= b)).mean() for _, a, b in NHOM_TC] + [tc.isna().mean()]
+    c1, c2 = st.columns(2)
+    with c1:
+        st.subheader("Cần tăng ca bao lâu?")
+        fig = go.Figure(go.Bar(x=nhan, y=ti_le, marker=dict(color=MAU_SERIES, cornerradius=4),
+                               hovertemplate="%{x} phút: %{y:.0%} số kịch bản<extra></extra>"))
+        fig.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), bargap=0.25, plot_bgcolor="white",
+                          yaxis=dict(tickformat=".0%", title="Tỷ lệ kịch bản", gridcolor="#eeeeee"),
+                          xaxis=dict(title="Tăng ca cần (phút)"))
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption(f"Đăng ký trước {thoi_luong(dk) if dk is not None else '> 4 giờ'} tăng ca là đủ cho "
+                   f"{mc['muc_dang_ky']:.0%} khả năng (mức đăng ký trong config.yaml).")
+    with c2:
+        st.subheader("Bản đồ rủi ro – ưu tiên bảo trì phòng ngừa")
+        ve = bd.iloc[::-1]
+        fig = go.Figure(go.Bar(
+            x=ve["Rủi ro (sp)"], y=ve["Máy"] + " · " + ve["Công đoạn"], orientation="h",
+            marker=dict(color=MAU_SERIES, cornerradius=4),
+            customdata=ve[["Xác suất hỏng trong ca", "Mất nếu hỏng (sp)", "Tăng ca cần (phút)"]].values,
+            hovertemplate="%{y}<br>Xác suất hỏng trong ca: %{customdata[0]:.0%}<br>Mất nếu hỏng: %{customdata[1]} sp"
+                          "<br>Tăng ca cần: %{customdata[2]} phút<br>Rủi ro: %{x} sp<extra></extra>"))
+        fig.update_layout(height=320, margin=dict(l=10, r=10, t=10, b=10), plot_bgcolor="white",
+                          xaxis=dict(title="Rủi ro = xác suất hỏng × sp mất nếu hỏng", gridcolor="#eeeeee"))
+        st.plotly_chart(fig, use_container_width=True)
+        st.caption(f"Mỗi máy được thử hỏng lúc {luc.strftime('%H:%M')}, sửa trong thời gian ở mức 80%. "
+                   "Máy dễ hỏng hơn chưa chắc phải lo trước – máy hỏng thì thiệt hại lan xa hơn mới được ưu tiên (mục 4.6).")
+
+    st.markdown("**Bản đồ rủi ro chi tiết**")
+    cot = ["Ưu tiên", "Máy", "Công đoạn", "Xác suất hỏng trong ca", "Mất nếu hỏng (sp)", "Rủi ro (sp)",
+           "Sửa (giờ, mức 80%)", "Tăng ca cần (phút)", "Lắp ráp ra lúc 16:00", "Số điểm bị ảnh hưởng"]
+    st.dataframe(bd[cot].style.format({"Xác suất hỏng trong ca": "{:.0%}", "Rủi ro (sp)": "{:g}"}),
+                 use_container_width=True, hide_index=True)
+
+    st.subheader("Đề xuất mức đệm (mục 7.1)")
+    st.dataframe(dem.drop(columns=["Đỡ cho", "Theo từng máy (sp)", "Sức chứa"]), use_container_width=True, hide_index=True)
+    for _, r in dem.iterrows():
+        if r["Tồn thêm (sp)"] <= 0:
+            st.markdown(f"- **{r['Đệm']}**: mức hiện tại {r['Mức hiện tại']} sp đã đỡ được {r['Máy tệ nhất phía trước']} "
+                        f"hỏng {r['Sửa (giờ, mức 80%)']:g} giờ – giữ nguyên.")
+            continue
+        tc0, tc1 = r["Tăng ca cần – hiện tại (phút)"], r["Tăng ca cần – đề xuất (phút)"]
+        st.markdown(
+            f"- **{r['Đệm']}**: nâng từ {r['Mức hiện tại']} lên {r['Đề xuất']} sp (thêm {r['Tồn thêm (sp)']} sp bán thành "
+            f"phẩm; sức chứa {r['Sức chứa']}; cần theo từng máy hỏng – {r['Theo từng máy (sp)']}). Khi {r['Máy tệ nhất phía trước']} hỏng {r['Sửa (giờ, mức 80%)']:g} giờ, Lắp ráp ra lúc 16:00 tăng "
+            f"từ {r['Lắp ráp ra 16:00 – hiện tại']} lên {r['Lắp ráp ra 16:00 – đề xuất']} sp, giữ {r['Đỡ cho']} không "
+            f"đói hàng. Nhưng giờ tăng ca để trả đệm về mục tiêu " +
+            ("không đổi" if tc0 == tc1 else f"đổi từ {tc0} thành {tc1} phút") +
+            f" ({tc1} phút): đệm dày hơn chỉ dời việc làm bù sang sau, không xóa được nó. "
+            "Hai con số đặt cạnh nhau để Kế hoạch quyết định.")
+
+    st.subheader("Câu trả lời cho từng bộ phận")
+    top = bd.head(2)
+    st.markdown(
+        f"- 🔧 **Bảo trì:** ưu tiên bảo dưỡng phòng ngừa {', '.join(top['Máy'])} "
+        f"(rủi ro {', '.join(f'{v:g}' for v in top['Rủi ro (sp)'])} sp/ca). "
+        f"Máy mất nhiều nhất nếu hỏng: {bd.loc[bd['Mất nếu hỏng (sp)'].idxmax(), 'Máy']} – nên có sẵn phụ tùng để rút ngắn thời gian sửa.\n"
+        f"- 📋 **Kế hoạch:** xác suất đủ kế hoạch trong ca {pt_tram(mc['p_trong_ca'])}; đăng ký trước "
+        f"{thoi_luong(dk) if dk is not None else '> 4 giờ'} tăng ca dự phòng (đủ cho {mc['muc_dang_ky']:.0%} khả năng).\n"
+        f"- 🚚 **Giao hàng & Sales:** đơn hôm nay kịp trong {pt_tram(mc['p_don_hom_nay'])} kịch bản.")
+
+    with st.expander("Tác động theo máy và chi tiết từng kịch bản"):
+        if len(mc["theo_may"]):
+            st.dataframe(mc["theo_may"].style.format({"Đủ kế hoạch trong ca khi hỏng": "{:.0%}"}),
+                         use_container_width=True, hide_index=True)
+        st.dataframe(mc["bang"].drop(columns=["Máy hỏng"]), use_container_width=True, hide_index=True)
+    st.caption("Thông số rủi ro (xác suất hỏng, thời gian sửa, dừng ngắn) là giả định demo trong config.yaml – thay bằng "
+               "thống kê phiếu sửa chữa khi có dữ liệu thật. Giản lược: các máy hỏng cùng lúc được sửa song song.")
+
+
 dc = day_chuyen()
 kbs = kich_ban()
 
 # ---------------------------------------------------------------- thanh bên
 st.sidebar.title("🏭 D3 – Lan truyền sự cố")
-nguon = st.sidebar.radio("Nguồn sự cố", ["Kịch bản có sẵn", "Tự nhập sự cố"], horizontal=True)
+nguon = st.sidebar.radio("Chế độ", ["Kịch bản có sẵn", "Tự nhập sự cố", "Diễn tập đầu ca"])
 
-if nguon == "Kịch bản có sẵn":
+if nguon == "Diễn tập đầu ca":
+    trang_dau_ca()
+    st.stop()
+elif nguon == "Kịch bản có sẵn":
     ma = st.sidebar.selectbox("Chọn kịch bản", list(kbs), format_func=lambda m: kbs[m].ten)
     kb = kbs[ma]
     pt, rieng = chay_kich_ban(ma)

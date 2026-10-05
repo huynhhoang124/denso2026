@@ -19,20 +19,20 @@ cong_doan:
     ten: Dập
     so_nguoi: 2                # giả định demo (dùng để tính chi phí tăng ca)
     may:
-      - {id: D1, chuan: 60, toi_da: 70}
-      - {id: D2, chuan: 60, toi_da: 70}
+      - {id: D1, chuan: 60, toi_da: 70, sua_gio: 3, hong_trong_ca: 0.04}
+      - {id: D2, chuan: 60, toi_da: 70, sua_gio: 3, hong_trong_ca: 0.04}
   - id: GC
     ten: Gia công
     so_nguoi: 3                # giả định demo
     may:
-      - {id: M1, chuan: 40, toi_da: 48}
-      - {id: M2, chuan: 40, toi_da: 46}
-      - {id: M3, chuan: 40, toi_da: 44}     # máy cũ
+      - {id: M1, chuan: 40, toi_da: 48, sua_gio: 4, hong_trong_ca: 0.05}
+      - {id: M2, chuan: 40, toi_da: 46, sua_gio: 4, hong_trong_ca: 0.05}
+      - {id: M3, chuan: 40, toi_da: 44, sua_gio: 4, hong_trong_ca: 0.10}     # máy cũ
   - id: LR
     ten: Lắp ráp
     so_nguoi: 6                # năng lực tỷ lệ với số người có mặt
     may:
-      - {id: LR-1, ten: Chuyền lắp ráp, chuan: 120, toi_da: 130}
+      - {id: LR-1, ten: Chuyền lắp ráp, chuan: 120, toi_da: 130, sua_gio: 2, hong_trong_ca: 0.03}
 
 dem:
   - {id: B1, ten: "Đệm B1", tu: DAP, den: GC, hien_tai: 200, muc_tieu: 200, suc_chua: 300}
@@ -87,6 +87,11 @@ phan_bo_sua:
   - {lech_gio: 1, xac_suat_cong_don: 0.80}
   - {lech_gio: 2, xac_suat_cong_don: 0.95}
 muc_dang_ky_tang_ca: 0.80     # đăng ký trước lượng tăng ca đủ cho 80% khả năng
+
+# Diễn tập đầu ca (mục 7.1–7.2) – giả định demo, thay bằng thống kê phiếu sửa chữa khi có dữ liệu thật:
+# mỗi máy có `sua_gio` (thời gian sửa thường gặp) và `hong_trong_ca` (xác suất hỏng trong một ca).
+# Ngoài hỏng hẳn còn có dừng ngắn (kẹt phôi, chờ vật tư…) mà engine không biết trước.
+dung_ngan: {xac_suat_moi_may: 0.30, phut_min: 5, phut_max: 30}
 
 # Đơn giá để quy đổi phương án ra tiền – toàn bộ là giả định demo (VND).
 chi_phi:

@@ -9,7 +9,10 @@ nhiễu − mô phỏng kế hoạch; hành động khắc phục cũng là nhi�
 """
 from __future__ import annotations
 
+import copy
 import itertools
+import math
+import random
 from collections import defaultdict
 from dataclasses import dataclass, field, replace
 from pathlib import Path
@@ -949,6 +952,147 @@ def diem_bi_anh_huong(dc: DayChuyen, kq: KetQua, don: dict | None = None) -> set
                 bi.add(d["Đơn"])
                 bi.update(v for v in dc.G.successors(d["Đơn"]))
     return {b for b in bi if b in dc.G}
+
+
+# ---------------------------------------------------------------- diễn tập đầu ca (mục 7.1–7.2)
+def lech_sua(dc: DayChuyen, muc: float | None = None) -> float:
+    """Độ lệch thời gian sửa (giờ) so với dự kiến ở mức xác suất `muc` (mặc định mức đăng ký tăng ca)."""
+    muc = dc.cfg.get("muc_dang_ky_tang_ca", 0.8) if muc is None else muc
+    pb = dc.cfg.get("phan_bo_sua", [])
+    for x in pb:
+        if x["xac_suat_cong_don"] >= muc - EPS:
+            return x["lech_gio"]
+    return pb[-1]["lech_gio"] + 1 if pb else 0.0
+
+
+def ban_do_rui_ro(dc: DayChuyen, luc: str | int = "10:00", cs: ChinhSach | None = None) -> pd.DataFrame:
+    """Diễn tập "nếu máy này hỏng thì sao" cho từng máy: hỏng lúc `luc`, sửa trong thời gian ở mức 80%.
+
+    Ưu tiên bảo trì = xác suất hỏng × số sản phẩm mất nếu hỏng (mục 4.6); số sau lấy từ engine.
+    """
+    cs = cs or ChinhSach(muc=2)
+    lech = lech_sua(dc)
+    dong = []
+    for m, info in dc.may.items():
+        if "sua_gio" not in info:
+            continue
+        h = info["sua_gio"] + lech
+        kq = mo_phong(dc, [Nhieu(m, "nang_luc", -100, luc, h)], cs)
+        mat = max(0.0, kq.ke_hoach_tong - kq.san_luong())
+        p = info.get("hong_trong_ca", 0.0)
+        dong.append({"Máy": m, "Công đoạn": dc.ten(info["cong_doan"]), "Sửa (giờ, mức 80%)": h,
+                     "Mất nếu hỏng (sp)": round(mat), "Lắp ráp ra lúc 16:00": round(kq.cum[dc.thu_tu[-1]][dc.ca]),
+                     "Tăng ca cần (phút)": kq.tang_ca_can(), "Số điểm bị ảnh hưởng": len(diem_bi_anh_huong(dc, kq)),
+                     "Xác suất hỏng trong ca": p, "Rủi ro (sp)": round(p * mat, 1)})
+    df = pd.DataFrame(dong).sort_values(["Rủi ro (sp)", "Mất nếu hỏng (sp)"], ascending=False)
+    df.insert(0, "Ưu tiên", range(1, len(df) + 1))
+    return df.reset_index(drop=True)
+
+
+def muc_dem_toi_thieu(dc: DayChuyen, dem: str, may: str) -> dict:
+    """Mức đệm tối thiểu để đỡ được máy `may` (ở công đoạn trước đệm) hỏng = hụt × thời gian sửa mức 80%."""
+    cd = dc.dem[dem]["tu"]
+    con = sum(dc.may[m]["toi_da"] for m in dc.may_cua(cd) if m != may)
+    hut = max(0.0, dc.nhip - con)
+    h = dc.may[may].get("sua_gio", 0) + lech_sua(dc)
+    return {"hut": hut, "sua_gio": h, "can": hut * h}
+
+
+def _voi_dem(dc: DayChuyen, dem: str, muc: float) -> DayChuyen:
+    cfg = copy.deepcopy(dc.cfg)
+    for d in cfg["dem"]:
+        if d["id"] == dem:
+            d["hien_tai"] = d["muc_tieu"] = muc
+    return DayChuyen(cfg)
+
+
+def de_xuat_muc_dem(dc: DayChuyen, luc: str | int = "10:00", cs: ChinhSach | None = None) -> pd.DataFrame:
+    """Đề xuất mức đệm (mục 7.1) và kiểm chứng bằng mô phỏng: máy tệ nhất phía trước hỏng, mức đệm hiện tại vs đề xuất.
+
+    Hai con số đặt cạnh nhau: đệm dày hơn giữ cho công đoạn sau không đói hàng (hàng ra cuối chuyền đủ hơn),
+    đổi lại là thêm tồn bán thành phẩm – và phần đệm đã dùng vẫn phải bù lại sau đó (quy ước mục 10).
+    """
+    cs = cs or ChinhSach(muc=2)
+    dong = []
+    for b, info in dc.dem.items():
+        ung_vien = [(m, muc_dem_toi_thieu(dc, b, m)) for m in dc.may_cua(info["tu"]) if "sua_gio" in dc.may[m]]
+        if not ung_vien:
+            continue
+        m, x = max(ung_vien, key=lambda v: v[1]["can"])
+        de_xuat = min(info["suc_chua"], math.ceil(x["can"]))
+        nhieu = [Nhieu(m, "nang_luc", -100, luc, x["sua_gio"])]
+        kq0, kq1 = mo_phong(dc, nhieu, cs), mo_phong(_voi_dem(dc, b, de_xuat), nhieu, cs)
+        cuoi = dc.thu_tu[-1]
+        dong.append({
+            "Đệm": dc.ten(b), "Đỡ cho": dc.ten(info["den"]), "Máy tệ nhất phía trước": m,
+            "Hụt khi hỏng (sp/h)": round(x["hut"], 1), "Sửa (giờ, mức 80%)": x["sua_gio"],
+            "Theo từng máy (sp)": ", ".join(f"{mm}: {math.ceil(v['can'])}" for mm, v in ung_vien),
+            "Mức hiện tại": info["muc_tieu"], "Đề xuất": de_xuat, "Sức chứa": info["suc_chua"],
+            "Tồn thêm (sp)": max(0, de_xuat - info["muc_tieu"]),
+            "Lắp ráp ra 16:00 – hiện tại": round(kq0.cum[cuoi][dc.ca]),
+            "Lắp ráp ra 16:00 – đề xuất": round(kq1.cum[cuoi][dc.ca]),
+            "Tăng ca cần – hiện tại (phút)": kq0.tang_ca_can(),
+            "Tăng ca cần – đề xuất (phút)": kq1.tang_ca_can(),
+        })
+    return pd.DataFrame(dong)
+
+
+def sinh_rui_ro(dc: DayChuyen, rnd: random.Random) -> list[Nhieu]:
+    """Rút ngẫu nhiên các sự cố của một ca từ thông số rủi ro – mỗi rủi ro vẫn là một nhiễu theo mẫu chung.
+
+    Engine không biết trước: máy nào hỏng, lúc nào, sửa lệch dự kiến bao nhiêu, các lần dừng ngắn.
+    """
+    pb = dc.cfg.get("phan_bo_sua", [])
+    dn = dc.cfg.get("dung_ngan")
+    ds = []
+    for m, info in dc.may.items():
+        if rnd.random() < info.get("hong_trong_ca", 0.0):
+            u = rnd.random()
+            lech = next((x["lech_gio"] for x in pb if u <= x["xac_suat_cong_don"]), pb[-1]["lech_gio"] + 1 if pb else 0)
+            ds.append(Nhieu(m, "nang_luc", -100, rnd.randrange(0, dc.ca, 5), max(0.5, info.get("sua_gio", 1) + lech),
+                            mo_ta=f"{m} hỏng"))
+        if dn and rnd.random() < dn["xac_suat_moi_may"]:
+            ds.append(Nhieu(m, "nang_luc", -100, rnd.randrange(0, dc.ca, 5),
+                            rnd.randint(dn["phut_min"], dn["phut_max"]) / 60, mo_ta=f"{m} dừng ngắn"))
+    return ds
+
+
+def xac_suat_hoan_thanh(dc: DayChuyen, so_lan: int = 300, seed: int = 7, cs: ChinhSach | None = None) -> dict:
+    """Xác suất hoàn thành kế hoạch hôm nay (mục 7.2): chạy kế hoạch ca qua engine `so_lan` lần với rủi ro rút ngẫu nhiên.
+
+    Giản lược: các máy hỏng cùng lúc được sửa song song (chưa xét giới hạn một tổ bảo trì như TH2).
+    """
+    cs = cs or ChinhSach(muc=2)
+    rnd = random.Random(seed)
+    goc = mo_phong(dc, [], cs)
+    dong = []
+    for i in range(so_lan):
+        nhieu = sinh_rui_ro(dc, rnd)
+        kq = mo_phong(dc, nhieu, cs) if nhieu else goc
+        tc = kq.tang_ca_can()
+        don = danh_gia_don(kq, dc.tang_ca_max if tc is None else tc)
+        dong.append({"Lần": i + 1, "Sự cố": "; ".join(n.mo_ta for n in nhieu) or "–",
+                     "Máy hỏng": [n.diem for n in nhieu if n.mo_ta.endswith("hỏng")],
+                     "Sản lượng 16:00": round(kq.san_luong()), "Tăng ca cần (phút)": tc,
+                     "Đơn hôm nay kịp": all(d["Trạng thái"] == "Kịp" for d in don["don"] if d["Hạn"].startswith("hôm nay"))})
+    df = pd.DataFrame(dong)
+    tc = df["Tăng ca cần (phút)"]
+    muc = dc.cfg.get("muc_dang_ky_tang_ca", 0.8)
+    xep = sorted(math.inf if pd.isna(v) else v for v in tc)
+    dang_ky = xep[min(len(xep) - 1, math.ceil(muc * len(xep)) - 1)]
+    theo_may = []
+    for m in dc.may:
+        co = df[df["Máy hỏng"].map(lambda ds: m in ds)]
+        if len(co):
+            theo_may.append({"Máy": m, "Số lần hỏng": len(co),
+                             "Tăng ca TB khi hỏng (phút)": round(co["Tăng ca cần (phút)"].fillna(dc.tang_ca_max).mean()),
+                             "Đủ kế hoạch trong ca khi hỏng": (co["Tăng ca cần (phút)"] == 0).mean()})
+    return {"bang": df, "so_lan": so_lan, "seed": seed,
+            "p_trong_ca": float((tc == 0).mean()),
+            "p_trong_gioi_han": float(tc.notna().mean()),
+            "p_don_hom_nay": float(df["Đơn hôm nay kịp"].mean()),
+            "muc_dang_ky": muc, "dang_ky_tang_ca": None if math.isinf(dang_ky) else int(dang_ky),
+            "theo_may": pd.DataFrame(theo_may)}
 
 
 # ---------------------------------------------------------------- phân tích tổng hợp

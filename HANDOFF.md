@@ -113,6 +113,22 @@ Ghi chú tính tay ban đầu (đã khớp mô phỏng):
   mục lục cập nhật số trang theo độ dời (LibreOffice render: 15 → 16 trang). Kiểm tra: validate.py PASSED, mọi dòng mới của IDEA.md có trong docx.
   (Container cần `apt-get install libreoffice-writer` + `pip install defusedxml lxml` mới render/validate được.)
 
+## Cập nhật phiên 2 (tiếp) – người dùng duyệt đề xuất "làm 3 rồi 1"
+
+- [x] Việc 3: `.github/workflows/tests.yml` (pytest, Python 3.10 + 3.12) và `demo/run.bat` (Windows; CRLF qua `.gitattributes`).
+- [x] Việc 1 – Diễn tập đầu ca (IDEA.md 7.1–7.2), chế độ thứ 3 ở thanh bên:
+  - `engine.py`: `lech_sua`, `ban_do_rui_ro`, `muc_dem_toi_thieu`, `de_xuat_muc_dem`, `sinh_rui_ro`, `xac_suat_hoan_thanh`.
+  - `config.yaml`: mỗi máy thêm `sua_gio`, `hong_trong_ca`; thêm `dung_ngan` (giả định demo). Không đổi số cũ.
+  - `tests/test_dau_ca.py` (14 test; số tài liệu: 7.1 B2/M2 = 28 × 5 = 140, thêm 80). Tổng **72 passed**.
+  - Kết quả (seed 7, 300 kịch bản): trong ca 42%, đăng ký 38', ≤4h 99,7%, D-101 100%. Ưu tiên bảo trì: M3 > LR-1 > M1 > D1 = D2 > M2.
+  - Phát hiện (đã ghi README, CHƯA sửa quy ước): đệm B2 150 giữ Lắp ráp ra 960 khi M1 hỏng 5h (thay vì 878) nhưng
+    giờ tăng ca không đổi (66') vì đệm phải trả về mục tiêu. Muốn đệm "có lợi" phải tính bù đệm bằng năng lực dư ca sau – cần người dùng quyết.
+  - Giao diện: Playwright 0 exception. Lưu ý: Chromium headless trong container có locale `en-US@posix` không hợp lệ
+    → `st.time_input` báo RangeError (cả chế độ Tự nhập cũ); dùng `newContext({locale: 'vi-VN'})` khi kiểm tra.
+
 ## Việc còn lại (cho phiên mới)
 
-1. Theo dõi PR #1 (CI / review) nếu có sự kiện.
+1. Theo dõi PR #1 (CI / review) – CI mới thêm, xem lần chạy đầu.
+2. Việc 2 trong đề xuất: "Đồng hồ quyết định" (IDEA.md 7.3) – thời điểm muộn nhất còn hiệu lực cho mỗi phương án.
+3. Việc 4: kịch bản demo 5 phút + slide pitch (sau khi người dùng duyệt).
+4. Hỏi người dùng: có tính bù đệm bằng năng lực dư ca sau không (xem phát hiện ở trên); có cập nhật IDEA.md/docx mục 7.1–7.2 bằng số mô phỏng không.

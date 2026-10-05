@@ -16,11 +16,14 @@ Cần Python 3.10 trở lên.
 ```bash
 cd C:\denso2026\demo            # hoặc: cd denso2026/demo
 python -m pip install pandas networkx streamlit plotly pyyaml pytest
-python -m pytest -q             # 58 passed
+python -m pytest -q             # 72 passed
 streamlit run app.py            # mở http://localhost:8501
 ```
 
 Nên dùng `python -m pytest` thay cho `pytest`, để chắc chắn test chạy đúng bộ Python đã cài thư viện.
+Trên Windows có thể bấm đúp `run.bat`: cài thư viện, chạy test rồi mở giao diện.
+
+Giao diện có ba chế độ ở thanh bên: **Kịch bản có sẵn** (8 kịch bản), **Tự nhập sự cố** và **Diễn tập đầu ca**.
 
 ## Các file
 
@@ -31,6 +34,8 @@ Nên dùng `python -m pytest` thay cho `pytest`, để chắc chắn test chạy
 | `scenarios.py` | 8 kịch bản (ví dụ gốc và TH1–TH7) và bảng phả hệ sản phẩm tự tạo cho TH6. |
 | `app.py` | Giao diện Streamlit một trang, tiếng Việt. |
 | `tests/test_scenarios.py` | Mỗi assert ứng với một con số trong tài liệu. |
+| `tests/test_dau_ca.py` | Diễn tập đầu ca: số tài liệu ở mục 7.1 và tính chất của bản đồ rủi ro, mức đệm, Monte Carlo. |
+| `run.bat` | Chạy nhanh trên Windows. |
 
 ## Engine hoạt động thế nào
 
@@ -69,7 +74,9 @@ Nên dùng `python -m pytest` thay cho `pytest`, để chắc chắn test chạy
 
 ## Kết quả kiểm tra so với tài liệu
 
-`python -m pytest -q` cho **58 passed**. Engine không được chỉnh cho khớp số tài liệu. Lần chạy đầu có 5 chỗ bản tính tay lệch mô phỏng (đánh dấu `xfail`); sau khi xem lại, IDEA.md đã được sửa theo mô phỏng (mục 10), và các test đó nay kiểm số mới.
+`python -m pytest -q` cho **72 passed** (58 test số tài liệu mục 5–6, 14 test diễn tập đầu ca). GitHub Actions chạy cùng bộ test trên Python 3.10 và 3.12 mỗi lần push.
+
+**Mục 5–6:** Engine không được chỉnh cho khớp số tài liệu. Lần chạy đầu có 5 chỗ bản tính tay lệch mô phỏng (đánh dấu `xfail`); sau khi xem lại, IDEA.md đã được sửa theo mô phỏng (mục 10), và các test đó nay kiểm số mới.
 
 **Khớp tài liệu (mô phỏng bước 1 phút):**
 
@@ -101,6 +108,37 @@ Hai lưu ý không làm đổi kết quả:
 - Ở mục 5, khung 14:00–16:00 Gia công chạy 138 sp/h, cao hơn mức tối đa 130 của Lắp ráp. Phần dư dồn vào B2, nên sản lượng hiệu dụng không đổi.
 - TH4 chỉ đạt 18:00/18:30 khi đặt gấp 260 L-A, về trước 15:50 (A) hoặc 16:20 (B). Engine tự sinh hành động này, đúng như câu "sự cố này tự sinh ra trường hợp 3" trong tài liệu.
 
+## Diễn tập đầu ca (mục 7.1–7.2)
+
+Chạy trước khi vào ca, khi chưa có sự cố. Dùng lại đúng engine và mẫu nhiễu chung:
+
+- **Bản đồ rủi ro:** lần lượt cho từng máy hỏng (mặc định lúc 10:00), thời gian sửa lấy ở mức 80% của phân bố
+  (= dự kiến + 1 giờ). Ưu tiên bảo trì = xác suất hỏng trong ca × số sản phẩm mất nếu hỏng (mục 4.6).
+  Kết quả với thông số giả định: M3 (máy cũ, 10%/ca) xếp đầu dù mất ít nhất khi hỏng; LR-1 mất nhiều nhất (330 sp)
+  vì Lắp ráp không có máy dự phòng.
+- **Mức đệm đề xuất:** hụt khi máy tệ nhất phía trước hỏng × thời gian sửa mức 80%, không vượt sức chứa.
+  Khớp ví dụ mục 7.1: B2 khi M2 hỏng cần 28 × 5 = 140 sp (thêm 80 sp so với 60). Máy tệ nhất là M1
+  (hụt 30 sp/h) nên đề xuất 150 = sức chứa. B1 hiện 200 sp đã đủ cho D1 hỏng 4 giờ.
+- **Xác suất hoàn thành kế hoạch:** chạy kế hoạch ca qua 300 kịch bản rủi ro rút ngẫu nhiên, mỗi rủi ro là một nhiễu:
+  máy hỏng (xác suất theo máy), thời gian sửa lệch dự kiến (theo `phan_bo_sua`), dừng ngắn 5–30 phút.
+  Engine không biết trước các rủi ro này. Phản ứng: chia tải + tăng tốc. Ra xác suất đủ kế hoạch trong ca, giờ tăng ca
+  nên đăng ký trước (đủ cho 80% kịch bản), xác suất đơn hôm nay kịp, và tác động trung bình khi từng máy hỏng.
+
+Kết quả với thông số giả định (seed 7, 300 kịch bản): đủ kế hoạch trong ca 42%; đăng ký trước 38 phút tăng ca là đủ cho
+80% kịch bản; đủ kế hoạch nếu tăng ca ≤ 4 giờ 99,7%; D-101 kịp 100%.
+
+Hai điều mô phỏng cho thấy:
+
+- **42% là thấp vì kế hoạch kín 100% công suất chuẩn** (960 = 120 sp/h × 8 giờ). Sự cố sớm trong ca được tăng tốc
+  bù kịp; nhưng một lần dừng ngắn sát 16:00 không còn thời gian bù, nên vẫn cần vài phút tăng ca.
+- **Đệm dày hơn không giảm giờ tăng ca** theo quy ước "đệm phải trả về mục tiêu". Nâng B2 lên 150 giữ cho Lắp ráp
+  ra đủ 960 sp lúc 16:00 khi M1 hỏng 5 giờ (thay vì 878), nhưng giờ tăng ca vẫn 66 phút vì phần đệm đã dùng phải
+  bù lại. Đệm dày chỉ có lợi nếu được bù bằng năng lực dư ở ca sau (ví dụ Gia công chạy trên chuẩn) – điều quy ước
+  hiện tại chưa tính. Giao diện đặt hai con số cạnh nhau để Kế hoạch quyết định.
+
+Giản lược: các máy hỏng cùng lúc được sửa song song (chưa xét giới hạn một tổ bảo trì như TH2); xác suất hỏng, thời
+gian sửa và dừng ngắn là giả định demo trong `config.yaml`.
+
 ## Giả định của bản demo
 
 - Toàn bộ dữ liệu là tự tạo, theo đúng bảng ở mục 6. Đơn giá chi phí, sức chứa kho thành phẩm, số người ở Dập và Gia công, năng suất line 2 và giờ xe báo trễ (15:00) là giả định demo, đặt trong `config.yaml`.
@@ -114,4 +152,5 @@ Hai lưu ý không làm đổi kết quả:
 - **Weibull và cảnh báo trước khi hỏng (mục 4.6):** ước lượng xác suất hỏng trong 24 giờ từ lịch sử phiếu sửa; ưu tiên bảo trì = xác suất hỏng × số sản phẩm mất nếu hỏng, con số sau lấy từ chính engine này.
 - **LLM (mục 7.6):** dịch câu hỏi bằng lời thành mẫu nhiễu và dịch kết quả ra lời. Engine vẫn là bên tính số.
 - **Neo4j hoặc graph database:** khi số dây chuyền, lô và đơn lớn. Bản demo dùng networkx trong bộ nhớ.
-- Mô phỏng theo sự kiện cho nhiều sự cố chồng nhau, quy đổi mọi phương án ra tiền (mục 7.7), diễn tập rủi ro đầu ca và đề xuất mức đệm (mục 7.1–7.2), kho tri thức sự cố (mục 7.5).
+- Mô phỏng theo sự kiện cho nhiều sự cố chồng nhau, quy đổi mọi phương án ra tiền (mục 7.7), đồng hồ quyết định (mục 7.3), kho tri thức sự cố (mục 7.5).
+- Diễn tập đầu ca với dữ liệu thật: thay xác suất hỏng bằng Weibull theo giờ chạy, thêm rủi ro nguồn cung và thiếu người, xét giới hạn một tổ bảo trì.
