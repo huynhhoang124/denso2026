@@ -152,7 +152,7 @@ Ghi chú tính tay ban đầu (đã khớp mô phỏng):
     (xanh/vàng/đỏ theo MAU_MUC, có nhãn chữ, mốc ⏱), bảng. Cache `dong_ho_kich_ban(ma)` / `dong_ho_tu_nhap(khoa)`.
     Playwright 8 kịch bản: 0 exception, 0 lỗi JS. Ảnh `demo/screenshot_dong_ho.png`.
   - Lưu ý Playwright: Streamlit 1.65 dùng react-aria cho selectbox → bấm `[data-testid="stSelectbox"] button` rồi
-    `[role="option"]`; chờ `h3:has-text("Sơ đồ dây chuyền")`. Script mẫu đã dùng: xem commit phiên 3 trong PR.
+    `[role="option"]`; chờ `h3:has-text("Sơ đồ dây chuyền")` (đừng chờ text "Đồng hồ quyết định": khớp cả chữ spinner).
   - README: mục "Đồng hồ quyết định (mục 7.3)" + bảng khớp; số test 84.
 
 ## Việc còn lại (cho phiên mới)
