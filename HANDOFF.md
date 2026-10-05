@@ -86,4 +86,4 @@ Ghi chú tính tay ban đầu (đã khớp mô phỏng):
 - [x] Chạy streamlit + Playwright (node, /opt/node22/lib/node_modules/playwright): 8 kịch bản + tự nhập, 0 exception, 0 lỗi JS; ảnh `demo/screenshot_th3.png`
 - [x] Cập nhật "Chỗ lệch" theo số mô phỏng thật
 - Quyết định thêm: Xanh = chỉ chia tải/tăng tốc (bậc ≤ 2), không tăng ca/đổi thứ tự; đơn gấp mã khác mã đang chạy → sinh phương án đổi thứ tự.
-- [ ] Commit, push, draft PR, subscribe PR, báo cáo người dùng
+- [x] Commit, push, draft PR https://github.com/huynhhoang124/denso2026/pull/1 (đã subscribe), báo cáo người dùng
