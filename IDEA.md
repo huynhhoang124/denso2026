@@ -412,17 +412,23 @@ Cả bảy trường hợp dùng cùng một bản đồ và cùng một cách t
 
 #### 7.1 Diễn tập rủi ro đầu ca và đề xuất mức đệm
 
-Mỗi sáng, trước khi vào ca, hệ thống thử lần lượt "nếu máy này hỏng thì sao" cho từng máy và xếp hạng máy nào hỏng thì lan xa nhất (bản đồ rủi ro). Kết quả dùng cho bảo trì phòng ngừa.
+Mỗi sáng, trước khi vào ca, hệ thống thử lần lượt "nếu máy này hỏng thì sao" cho từng máy và xếp hạng máy nào hỏng thì lan xa nhất (bản đồ rủi ro). Kết quả dùng cho bảo trì phòng ngừa: ưu tiên = xác suất hỏng trong ca × số sản phẩm mất nếu hỏng (mục 4.6). Mô phỏng với thông số giả định (máy hỏng lúc 10:00, sửa ở mức 80%): M3 (máy cũ, 10%/ca) xếp đầu dù mất ít nhất khi hỏng (112 sp); LR-1 mất nhiều nhất (330 sp) vì Lắp ráp không có máy dự phòng.
 
-Từ đó đề xuất mức đệm tối thiểu = tốc độ thiếu hụt × thời gian sửa thường gặp. Ví dụ đệm B2: khi M2 hỏng thiếu 28 sp/h, thời gian sửa ở mức 80% là 5 giờ → B2 nên giữ khoảng 140 sp (sức chứa 150), thay vì 60 hiện tại. Đổi lại là thêm khoảng 80 sp bán thành phẩm tồn kho – hệ thống đặt hai con số cạnh nhau để quyết định.
+Từ đó đề xuất mức đệm tối thiểu = tốc độ thiếu hụt × thời gian sửa thường gặp. Ví dụ đệm B2: khi M2 hỏng thiếu 28 sp/h, thời gian sửa ở mức 80% là 5 giờ → B2 nên giữ khoảng 140 sp (sức chứa 150), thay vì 60 hiện tại. Máy tệ nhất trước B2 là M1 (thiếu 30 sp/h) → 150 sp, bằng sức chứa. Đổi lại là thêm 80–90 sp bán thành phẩm tồn kho – hệ thống đặt hai con số cạnh nhau để quyết định. Đệm B1 hiện 200 sp đã đủ cho D1 hỏng 4 giờ.
+
+Mô phỏng cho thấy đệm dày giữ cho cuối chuyền không bị đói hàng nhưng không giảm giờ tăng ca: B2 = 150 giúp Lắp ráp ra đủ 960 sp lúc 16:00 khi M1 hỏng 5 giờ (thay vì 878), nhưng vẫn cần 66 phút tăng ca vì phần đệm đã dùng phải bù lại (quy ước ở mục 10).
 
 #### 7.2 Xác suất hoàn thành kế hoạch trước khi vào ca
 
-Mỗi kế hoạch ca được chạy qua engine với rủi ro hỏng máy lấy từ lịch sử → "xác suất hoàn thành kế hoạch hôm nay: 87%". Nếu thấp, Kế hoạch có thể đăng ký tăng ca dự phòng hoặc tăng đệm trước khi có sự cố.
+Mỗi kế hoạch ca được chạy qua engine nhiều lần với rủi ro lấy từ lịch sử (máy nào hỏng, lúc nào, sửa lệch dự kiến bao lâu, các lần dừng ngắn) → xác suất hoàn thành kế hoạch hôm nay và giờ tăng ca nên đăng ký trước. Nếu thấp, Kế hoạch có thể đăng ký tăng ca dự phòng hoặc tăng đệm trước khi có sự cố.
+
+Mô phỏng 300 ca với thông số giả định: đủ kế hoạch trong ca 42%; đăng ký trước 38 phút tăng ca là đủ cho 80% số ca; đủ kế hoạch nếu tăng ca tối đa 4 giờ: 99,7%; đơn D-101 kịp 100%. Con số 42% thấp vì kế hoạch kín 100% công suất chuẩn (960 = 120 sp/h × 8 giờ): sự cố sớm trong ca được tăng tốc bù kịp, nhưng một lần dừng ngắn sát 16:00 thì không còn thời gian bù.
 
 #### 7.3 "Đồng hồ quyết định"
 
-Mỗi phương án có thời điểm muộn nhất còn hiệu lực. Ví dụ trường hợp 3: phải quyết đổi thứ tự trước 11:20 (kho L-A cạn); sau đó mỗi phút chậm mất 2 sp. Trường hợp 4: phương án A chỉ còn hiệu lực nếu tăng tốc từ 10:00. Màn hình hiển thị đồng hồ đếm ngược để ba bộ phận biết còn bao lâu để thống nhất.
+Mỗi phương án có thời điểm muộn nhất còn hiệu lực. Hệ thống tính bằng cách chạy lại engine như thể phương án được quyết muộn hơn: trước lúc quyết, dây chuyền chạy như không làm gì. Ví dụ trường hợp 3: phải quyết đổi thứ tự chậm nhất 11:20 (kho L-A cạn); sau đó mỗi phút chậm mất 2 sp và thêm 1 phút tăng ca. Quyết sau 14:20 thì đổi thứ tự còn kém hơn không làm gì (vừa đổi sang Y thì lô L-A về lúc 15:00, lại phải đổi về X, mất thêm 40 phút đổi mã); sau khoảng 14:40 thì mất đơn D-101. Phương án nhà cung cấp tách lô cũng có mốc 11:20. Trường hợp 4: phương án A chỉ còn hiệu lực nếu tăng tốc từ 10:00 – phải quyết ngay; phương án B (chỉ tăng ca) quyết lúc nào trong ca cũng như nhau. Màn hình hiển thị đồng hồ đếm ngược để ba bộ phận biết còn bao lâu để thống nhất.
+
+Mốc trên chưa tính thời gian chuẩn bị (gọi nhà cung cấp, điều người, họp thống nhất); thực tế phải quyết sớm hơn mốc một khoảng bằng thời gian đó.
 
 #### 7.4 Tự hiệu chỉnh sau mỗi sự cố
 
@@ -544,6 +550,7 @@ Kiểm chứng bằng mô phỏng (bản demo trong `demo/`, mỗi con số có 
 - Trường hợp 7: mức Đỏ đổi thành Vàng, vì vẫn còn phương án giữ đơn đúng hạn (thuê xe ngoài), đúng theo định nghĩa ở mục 4.5.
 - Bổ sung (không đổi con số): trường hợp 4 với kho L-A của dây chuyền này phải đặt gấp 260 L-A thì mới đạt 18:00 / 18:30.
 - Quy ước sản lượng áp dụng cho mọi đệm, kể cả kho thành phẩm: phần đệm bị rút dưới mục tiêu không được tính là sản lượng cứu được. Kho thành phẩm vẫn được dùng khi kiểm tra đơn hàng.
+- Mục 7.1–7.3 bổ sung số mô phỏng: 7.1 khớp (B2 cần 140 sp khi M2 hỏng); thêm máy tệ nhất M1 → 150 sp và nhận xét đệm dày không giảm giờ tăng ca. 7.2: con số minh họa 87% thay bằng kết quả mô phỏng 42% đủ kế hoạch trong ca (kế hoạch kín 100% công suất chuẩn). 7.3 khớp (trường hợp 3: 11:20, 2 sp/phút; trường hợp 4: 10:00); thêm mốc 14:20 / 14:40 của trường hợp 3.
 
 ### Nguồn tham khảo
 

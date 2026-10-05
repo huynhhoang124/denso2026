@@ -157,12 +157,14 @@ def nhan_nut(n: str, a: dict, kq, t: int) -> str:
     return n
 
 
-def ban_do_lan_truyen(r: dict, nhieu: list[Nhieu], buoc: int = 10) -> go.Figure:
+def ban_do_lan_truyen(r: dict, nhieu: list[Nhieu], giao_hang: dict | None = None, buoc: int = 10) -> go.Figure:
     kq = r["kq"]
     den = ket_thuc(r)
     t_inc = min((n.t0 for n in nhieu), default=0)
     goc = {n.diem for n in nhieu}
     don_tre = {d["Đơn"] for d in r["don"]["don"] if d["Trạng thái"] != "Kịp" and d["Đơn"] in dc.G}
+    if giao_hang and giao_hang["tre"] > 0:  # sự cố giao hàng (TH7): đơn trên chuyến xe trễ, nếu không làm gì
+        don_tre |= {u for u in dc.G.predecessors(giao_hang["xe"]["id"]) if dc.loai(u) == "don_hang"}
 
     def du_lieu(t):
         s = trang_thai_nut(kq, t, t_inc, don_tre)
@@ -206,7 +208,7 @@ def ban_do_lan_truyen(r: dict, nhieu: list[Nhieu], buoc: int = 10) -> go.Figure:
         d, tieu, so[t] = du_lieu(t)
         frames.append(go.Frame(data=d, traces=[1, 2], name=gio(t), layout=dict(title=dict(text=tieu))))
     # mở sẵn ở lúc tệ nhất (nhiều điểm bị ảnh hưởng nhất); nút ▶ phát lại từ ngay trước sự cố
-    te_nhat = max(moc, key=lambda t: (so[t], -t))
+    te_nhat = max(moc, key=lambda t: (so[t], t >= t_inc, -t))
     data0, tieu0, _ = du_lieu(te_nhat)
     fig = go.Figure(data=[nen] + data0)
     fig.frames = frames
@@ -280,12 +282,12 @@ def bieu_do_cuu_duoc(pt, moc_quyet: int | None) -> go.Figure:
 
 
 def bieu_do_dong_ho(bang: pd.DataFrame, de_xuat: str | None) -> go.Figure | None:
-    b = bang[bang["_moc"].notna()]
+    b = bang[bang["Muộn nhất không mất gì"].notna()]
     if not len(b):
         return None
     fig = go.Figure()
     ten = [("★ " if r["Phương án"] == de_xuat else "") + r["Phương án"] for _, r in b.iterrows()]
-    t0 = int(b["_t_inc"].min())
+    t0 = int(b["Phát hiện lúc"].min())
 
     def doan(nhan, mau, tu, den, chu, hover):
         fig.add_trace(go.Bar(y=ten, x=[max(0, d - a) for a, d in zip(tu, den)], base=tu, orientation="h", name=nhan,
@@ -293,17 +295,18 @@ def bieu_do_dong_ho(bang: pd.DataFrame, de_xuat: str | None) -> go.Figure | None
                              text=chu, textposition="inside", insidetextanchor="middle",
                              textfont=dict(color="#0b1020", size=12), hovertext=hover, hoverinfo="text"))
 
-    tu = [int(x) for x in b["_t_inc"]]
-    khong_giu = [pd.isna(x) for x in b["_het"]]
-    moc = [a if k else int(m) for a, m, k in zip(tu, b["_moc"], khong_giu)]
-    het = [a if k else max(int(h), m) for a, h, m, k in zip(tu, b["_het"], moc, khong_giu)]
-    doan("Không mất gì", XANH_LA, tu, moc, [f"quyết trước {gio(m)}" if m - a >= 40 else "" for a, m in zip(tu, moc)],
+    tu = [int(x) for x in b["Phát hiện lúc"]]
+    khong_giu = [pd.isna(x) for x in b["Hết hiệu lực (giữ đơn)"]]
+    moc = [a if k else int(m) for a, m, k in zip(tu, b["Muộn nhất không mất gì"], khong_giu)]
+    het = [a if k else max(int(h), m) for a, h, m, k in zip(tu, b["Hết hiệu lực (giữ đơn)"], moc, khong_giu)]
+    doan("Không mất gì", XANH_LA, tu, moc, [("quyết lúc nào cũng như nhau" if m >= dc.ca else f"quyết trước {gio(m)}") if m - a >= 40 else ""
+                                    for a, m in zip(tu, moc)],
          [f"{gio(a)}–{gio(m)}: quyết lúc nào trong khoảng này cũng như nhau" for a, m in zip(tu, moc)])
     chu_vang = []
     for (_, r), a, d in zip(b.iterrows(), moc, het):
         mat, tc = r["Mỗi phút chậm mất (sp)"], r["Mỗi phút chậm thêm tăng ca (phút)"]
         ok = d - a >= 120 and pd.notna(mat) and mat > 0
-        chu_vang.append((f"chậm 1 phút: −{mat:g} sp" + (f", +{tc:g}′ tăng ca" if pd.notna(tc) and tc > 0 else ""))
+        chu_vang.append((f"chậm 1 phút: −{round(mat, 1):g} sp" + (f", +{round(tc, 1):g}′ tăng ca" if pd.notna(tc) and tc > 0 else ""))
                         if ok else "")
     doan("Vẫn giữ đơn, nhưng mất thêm", "#fab219", moc, het, chu_vang,
          [f"{gio(a)}–{gio(d)}: vẫn giữ được đơn (bằng tăng ca), mỗi phút chậm mất thêm" for a, d in zip(moc, het)])
@@ -452,19 +455,28 @@ def trang_su_co(pt, rieng: dict, giay: float, tieu_de: str, tinh_huong: str, tai
                   f"{thoi_luong(pt.quet_sua['Tăng ca (phút)'].max())} tùy thời gian sửa.")
     the_kpi("Tăng ca đề xuất", e(thoi_luong(tc) if tc is not None else "> 4 giờ"),
             khoang or "Để giữ mọi đơn và trả các đệm về mục tiêu.", noi=k[2])
-    if hang_dx is not None and pd.notna(hang_dx["_moc"]):
-        moc = int(hang_dx["_moc"])
+    if hang_dx is not None and pd.notna(hang_dx["Muộn nhất không mất gì"]):
+        moc, t_ph = int(hang_dx["Muộn nhất không mất gì"]), int(hang_dx["Phát hiện lúc"])
         mat, tcp = hang_dx["Mỗi phút chậm mất (sp)"], hang_dx["Mỗi phút chậm thêm tăng ca (phút)"]
+        het = hang_dx["Hết hiệu lực (giữ đơn)"]
         sau = []
-        if mat is not None and not pd.isna(mat) and mat > 0:
+        if pd.notna(mat) and mat > 0:
             sau.append(f"−{round(mat, 1):g} sp")
-        if tcp is not None and not pd.isna(tcp) and tcp > 0:
+        if pd.notna(tcp) and tcp > 0:
             sau.append(f"+{round(tcp, 1):g} phút tăng ca")
-        phu = (f"Còn <b>{moc - t_inc} phút</b> kể từ lúc phát hiện để 3 bộ phận thống nhất."
-               + (f" Sau đó mỗi phút chậm: {', '.join(sau)}." if sau else " Quyết muộn hơn cũng không mất thêm."))
-        the_kpi("⏱ Đồng hồ quyết định", f"Trước {gio(moc)}", phu, lop="wr-clock", noi=k[3])
+        if "như nhau" in hang_dx["Ghi chú"]:
+            gia_tri, phu = "Không gấp", "Quyết lúc nào trong ca cũng cho cùng kết quả."
+        else:
+            gia_tri = "Quyết ngay" if moc == t_ph else f"Trước {gio(moc)}"
+            phu = ((f"Còn <b>{moc - t_ph} phút</b> kể từ lúc phát hiện để 3 bộ phận thống nhất." if moc > t_ph
+                    else "Mỗi phút chờ đều mất thêm.")
+                   + (f" Sau đó mỗi phút chậm: {', '.join(sau)}." if sau else "")
+                   + (f" Sau {gio(int(het))} phương án hết giữ được đơn." if pd.notna(het) and het < dc.ca else ""))
+        the_kpi("⏱ Đồng hồ quyết định", gia_tri, phu, lop="wr-clock", noi=k[3])
     else:
-        the_kpi("⏱ Đồng hồ quyết định", "–", "Không có phương án đề xuất để đếm ngược.", lop="wr-clock", noi=k[3])
+        the_kpi("⏱ Đồng hồ quyết định", "–",
+                "Sự cố không đổi dòng chảy sản xuất – không có mốc cho sản xuất." if dx else
+                "Không có phương án đề xuất để đếm ngược.", lop="wr-clock", noi=k[3])
 
     # ---- đề xuất
     if dx:
@@ -485,7 +497,7 @@ def trang_su_co(pt, rieng: dict, giay: float, tieu_de: str, tinh_huong: str, tai
     r_bd = dx if chon != lua[0] and dx else k0
     c1, c2 = st.columns([2.4, 1])
     with c1:
-        ve(ban_do_lan_truyen(r_bd, pt.nhieu), key=f"map_{khoa}_{chon}")
+        ve(ban_do_lan_truyen(r_bd, pt.nhieu, pt.giao_hang if r_bd is k0 else None), key=f"map_{khoa}_{chon}")
         chu_giai([("Viền trắng = điểm xảy ra sự cố", "#ffffff")] + NHOM_TT)
     with c2:
         html_(f"<div class='wr-kpi-label' style='margin:.2rem 0 .4rem'>Diễn biến – {e(chon.lower())}</div>")
@@ -520,7 +532,8 @@ def trang_su_co(pt, rieng: dict, giay: float, tieu_de: str, tinh_huong: str, tai
     c1, c2 = st.columns([1.15, 1])
     with c1:
         html_("<div class='wr-kpi-label'>Sản lượng hiệu dụng cộng dồn – vùng tô là phần cứu được</div>")
-        moc_dx = int(hang_dx["_moc"]) if hang_dx is not None and pd.notna(hang_dx["_moc"]) else None
+        moc_dx = (int(hang_dx["Muộn nhất không mất gì"]) if hang_dx is not None
+                  and pd.notna(hang_dx["Muộn nhất không mất gì"]) and "như nhau" not in hang_dx["Ghi chú"] else None)
         ve(bieu_do_cuu_duoc(pt, moc_dx), key=f"cum_{khoa}")
         st.caption("Tính tại cuối chuyền, trừ phần đệm bị rút dưới mục tiêu và hàng bị giữ (quy ước: tính tại nút cổ "
                    "chai, đệm phải trả về mục tiêu). Đường kéo dài sau 16:00 = tăng ca.")
@@ -612,8 +625,12 @@ def trang_su_co(pt, rieng: dict, giay: float, tieu_de: str, tinh_huong: str, tai
     with t3:
         st.dataframe(pt.bang_phuong_an().style.format({"Chi phí (VND)": "{:,.0f}"}), hide_index=True)
         if len(bang_dh):
-            st.dataframe(bang_dh.drop(columns=["_moc", "_het", "_t_inc"]), hide_index=True)
-        st.caption("Đồng hồ: tìm nhị phân theo phút, giả định quyết càng muộn kết quả càng không tốt hơn.")
+            hien = bang_dh.copy()
+            for c in ("Phát hiện lúc", "Muộn nhất không mất gì", "Hết hiệu lực (giữ đơn)"):
+                hien[c] = hien[c].map(lambda v: "–" if pd.isna(v) else gio(int(v)))
+            st.dataframe(hien, hide_index=True)
+        st.caption("Đồng hồ: quét mỗi 15 phút rồi tìm nhị phân trong khoảng đầu tiên bị mất (kết quả có thể không "
+                   "đơn điệu theo giờ quyết). Chưa tính thời gian chuẩn bị (gọi NCC, điều người, họp thống nhất).")
     with t4:
         if tai_lieu:
             st.markdown(f"**Con số trong IDEA.md:** {tai_lieu}")
