@@ -40,7 +40,8 @@ Giao diện có bốn chế độ ở thanh bên: **Tổng quan** (8 kịch bả
 | `scenarios.py` | 8 kịch bản (ví dụ gốc và TH1–TH7) và bảng phả hệ sản phẩm tự tạo cho TH6. |
 | `app.py` | Giao diện Streamlit tiếng Việt: tổng quan, trang sự cố, tự nhập, diễn tập đầu ca. |
 | `giao_dien.py` | Phong cách "War Room" tối: màu, CSS, template Plotly và các thẻ HTML dùng chung. |
-| `.streamlit/config.toml` | Theme tối của Streamlit (nạp khi chạy từ thư mục `demo`). |
+| `../.streamlit/config.toml` | Theme tối của Streamlit, đặt ở gốc repo (nạp khi chạy `streamlit run demo/app.py` từ gốc repo; Streamlit Cloud cũng chỉ đọc ở đó). |
+| `requirements.txt` | Thư viện với phiên bản cố định (dùng cho `run.bat` và Streamlit Cloud). |
 | `tests/test_scenarios.py` | Mỗi assert ứng với một con số trong tài liệu. |
 | `tests/test_dong_ho.py` | Đồng hồ quyết định: số tài liệu ở mục 7.3. |
 | `tests/test_dau_ca.py` | Diễn tập đầu ca: số tài liệu ở mục 7.1 và tính chất của bản đồ rủi ro, mức đệm, Monte Carlo. |
@@ -198,8 +199,8 @@ xếp lớp bên dưới. Không thêm thư viện – chỉ theme Streamlit, CS
   01 bản đồ lan truyền dạng làn song song (bán thành phẩm + một làn mỗi mã: linh kiện → lắp ráp → thành phẩm → đơn →
   xe → khách; chỉ gộp ở lắp ráp, đệm/linh kiện là thanh mức, đường đỏ = sự cố đã lan tới) – mở sẵn ở lúc tệ nhất,
   nút ▶ phát lại từng 10 phút từ lúc sự cố, chuyển
-  "không làm gì ↔ đề xuất"; 02 thẻ phương án, biểu đồ cứu được và thanh đồng hồ quyết định; 03 câu trả lời từng bộ phận;
-  04 chi tiết kỹ thuật (Gantt, đệm, linh kiện, bảng số, đối chiếu IDEA.md).
+  "không làm gì ↔ đề xuất"; 02 thẻ phương án, biểu đồ cứu được và thanh đồng hồ quyết định; 03 phương án đề xuất –
+  vì sao chọn và tối ưu thế nào; 04 câu trả lời từng bộ phận; 05 chi tiết kỹ thuật (Gantt, đệm, linh kiện, bảng số, đối chiếu IDEA.md).
 - Màu trạng thái cố định theo nghĩa (dừng/hỏng, hết/cạn, đói hàng, bị chặn/đầy, tăng tốc, đổi mã), luôn kèm chú giải
   chữ; bảng màu danh mục đã kiểm tra tương phản và mù màu trên nền tối.
 - Thời gian engine hiển thị là thời gian thật của lần tính đầu (sau đó dùng lại từ bộ nhớ đệm).
