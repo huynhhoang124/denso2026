@@ -275,3 +275,10 @@ def test_lan_xuoi_cong_doan_sau_doi_hang():
 def test_gioi_han_6_gio_tren_chuan():
     kq = mo_phong(dc, M2_HONG, ChinhSach(muc=2))
     assert max(kq.tren_chuan.values()) <= 6 * 60
+
+
+def test_th7_de_xuat_giao_hang_thue_xe_ngoai_va_bao_giao_hang():
+    pt = kb("th7")[0]
+    assert pt.giao_hang["de_xuat"]["Phương án"].startswith("Thuê xe ngoài")
+    assert "Giao hàng & Sales" in pt.gui_cho
+    assert pt.thong_diep["Giao hàng & Sales"][0].startswith("Đề xuất giao hàng: **Thuê xe ngoài")

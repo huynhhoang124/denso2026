@@ -663,7 +663,17 @@ def trang_su_co(pt, rieng: dict, giay: float, tieu_de: str, tinh_huong: str, tai
                 "Không có phương án đề xuất để đếm ngược.", lop="wr-clock", noi=k[3])
 
     # ---- đề xuất
-    if dx:
+    gh = pt.giao_hang if pt.giao_hang and pt.giao_hang["tre"] > 0 else None
+    if gh and gh["de_xuat"]:  # sự cố giao hàng: đề xuất là phương án giao, sản xuất giữ nguyên
+        p = gh["de_xuat"]
+        html_(f"<div class='wr-reco'><div class='ic'>🚚</div><div><div class='t'>Đề xuất: {e(p['Phương án'])}</div>"
+              f"<div class='d'>{e(p['Kết quả'])} (hạn {gio(gh['han'])}) · chi phí ~{p['Chi phí (VND)']:,.0f} VND · "
+              f"sản xuất giữ nguyên kế hoạch, không cần tăng ca · báo khách song song. "
+              f"Con người quyết định cuối cùng.</div></div></div>")
+    elif gh:
+        html_(f"<div class='wr-reco no'><div class='ic'>⚠️</div><div><div class='t'>Không phương án giao hàng nào kịp "
+              f"hạn {gio(gh['han'])}</div><div class='d'>Báo khách ngay, giao tách đợt.</div></div></div>")
+    elif dx:
         tc_txt = f" + tăng ca {thoi_luong(tc)}" if tc else ""
         html_(f"<div class='wr-reco'><div class='ic'>✅</div><div><div class='t'>Đề xuất: {e(dx['pa'].ten)}{e(tc_txt)}</div>"
               f"<div class='d'>Cứu thêm <b>{dx['cuu_duoc']:+.0f} sp</b> · chi phí ~{dx['chi_phi']:,.0f} VND · "
@@ -686,6 +696,19 @@ def trang_su_co(pt, rieng: dict, giay: float, tieu_de: str, tinh_huong: str, tai
           f"<span><i style='background:#fff'></i>viền trắng + ⚡ = điểm xảy ra sự cố</span>"
           f"<span><i style='background:#e66767'></i>đường đỏ = sự cố đã lan tới</span></div>")
     chu_giai(NHOM_TT)
+    with st.expander("Cách đọc luồng trên bản đồ"):
+        lk_ma = ", ".join(f"mã {sp} dùng {s['linh_kien']}" for sp, s in dc.san_pham.items())
+        st.markdown(
+            "1. **Làn Bán thành phẩm – dùng chung:** Dập → Đệm B1 → Gia công → Đệm B2 làm một loại bán thành phẩm "
+            "cho mọi mã. Máy ở đoạn này hỏng thì mọi mã đều thiếu hàng.\n"
+            f"2. **Làn từng mã:** nhà cung cấp → linh kiện riêng của mã đó ({lk_ma}).\n"
+            "3. **Lắp ráp (cột GỘP):** bán thành phẩm + linh kiện → thành phẩm. Chỉ có một chuyền nên mỗi lúc lắp "
+            f"một mã; đổi mã mất {dc.doi_ma:.0f} phút. Hết linh kiện của mã này thì có thể chuyển sang lắp mã khác.\n"
+            "4. **Sau lắp ráp tách theo mã:** kho thành phẩm → đơn hàng → xe giao → khách.\n"
+            "5. **Sự cố lan hai chiều:** xuôi – đệm cạn thì công đoạn sau đói hàng; ngược – đệm đầy (hoặc lắp ráp "
+            "dừng vì hết linh kiện) thì công đoạn trước bị chặn.\n"
+            "6. **Đơn ngày mai cũng có thể đỏ** dù mã đó hôm nay chưa chạy: ca hôm nay rút đệm dưới mục tiêu thì "
+            "ca mai phải bù đệm trước, mất giờ của các đơn ngày mai.")
     html_(f"<div class='wr-kpi-label' style='margin:.6rem 0 .4rem'>Diễn biến – {e(chon.lower())}</div>")
     dong = [(t, nd) for t, nd in dong_thoi_gian(r_bd["kq"])]
     html_("<div class='wr-card' style='max-height:260px;overflow:auto;display:grid;"
@@ -715,6 +738,22 @@ def trang_su_co(pt, rieng: dict, giay: float, tieu_de: str, tinh_huong: str, tai
             f"<div class='row'><span>Xáo trộn</span><span>{e(r['muc_xao_tron'])}</span></div>"
             f"<div style='margin-top:6px'>{giu}</div></div>")
     html_("<div class='wr-grid'>" + "".join(the) + "</div>")
+    if gh:
+        html_("<div class='wr-kpi-label' style='margin:.8rem 0 .4rem'>Phương án giao hàng – sản xuất không giải quyết "
+              "được xe trễ</div>")
+        the = []
+        for p in gh["phuong_an"]:
+            best = p is gh["de_xuat"]
+            nhan_dx = f"<span class='wr-tag' style='color:#0b1020;background:{XANH_LA}'>ĐỀ XUẤT</span>" if best else ""
+            kip = (f"<span class='wr-tag' style='color:{XANH_LA};background:{rgba(XANH_LA, .14)}'>✔ kịp hạn</span>"
+                   if p["Kịp hạn"] else f"<span class='wr-tag' style='color:#f07c7c;background:{rgba(DO, .16)}'>"
+                                        f"✘ chưa đủ để kịp hạn</span>")
+            the.append(f"<div class='wr-opt {'best' if best else ''}'><div class='b'>Giao hàng{nhan_dx}</div>"
+                       f"<div class='n'>{e(p['Phương án'])}</div>"
+                       f"<div class='row'><span>Kết quả</span><span>{e(p['Kết quả'])}</span></div>"
+                       f"<div class='row'><span>Chi phí</span><span>{p['Chi phí (VND)'] / 1e6:,.2f} tr</span></div>"
+                       f"<div style='margin-top:6px'>{kip}</div></div>")
+        html_("<div class='wr-grid'>" + "".join(the) + "</div>")
     st.write("")
     c1, c2 = st.columns([1.15, 1])
     with c1:

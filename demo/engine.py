@@ -869,7 +869,10 @@ def phan_tich_giao_hang(dc: DayChuyen, n: Nhieu, kq_kh: KetQua) -> dict:
            for sp in [don["san_pham"]]]
     tong_ton = [sum(dc.fg["hien_tai"].values()) + sum(kq_kh.cum_sp[sp][t] for sp in dc.san_pham)
                 for t in range(min(di, kq_kh.N) + 1)]
+    kip = [p for p in pa if p["Kịp hạn"]]
+    de_xuat = min(kip, key=lambda p: p["Chi phí (VND)"]) if tre > 0 and kip else None
     return {"xe": xe, "don": don, "gio_di": di, "gio_den": den, "han": han, "tre": tre, "phuong_an": pa,
+            "de_xuat": de_xuat,
             "ton_kho_dinh": max(tong_ton), "suc_chua_kho": dc.fg["suc_chua"],
             "kho_day": max(tong_ton) > dc.fg["suc_chua"], "ton_ma": max(ton)}
 
@@ -1180,6 +1183,8 @@ def phan_tich(dc: DayChuyen, nhieu: list[Nhieu], phuong_an_them: list[PhuongAn] 
         muc = "Xanh" if xanh else "Vàng" if de_xuat else "Đỏ"
     gui_cho = {"Xanh": ["Bảo trì"], "Vàng": ["Bảo trì", "Kế hoạch"],
                "Đỏ": ["Bảo trì", "Kế hoạch", "Giao hàng & Sales"]}[muc]
+    if giao_hang and giao_hang["tre"] > 0 and "Giao hàng & Sales" not in gui_cho:
+        gui_cho.append("Giao hàng & Sales")  # sự cố giao hàng: Giao hàng luôn phải biết, dù sản xuất không đổi
 
     cs_dx = de_xuat["pa"].cs if de_xuat else ChinhSach(muc=2)
     kq_dx = de_xuat["kq"] if de_xuat else khong_lam_gi["kq"]
@@ -1375,9 +1380,17 @@ def thong_diep(dc: DayChuyen, pt: PhanTich) -> dict[str, list[str]]:
               + (f" (gồm bù {mai['bu_dem']:.0f} sp đệm)" if mai["bu_dem"] > 0.5 else "") + ".")
 
     # Giao hàng & Sales
+    x = pt.giao_hang if pt.giao_hang and pt.giao_hang["tre"] > 0 else None
+    if x:
+        p = x["de_xuat"]
+        gh.append(f"Đề xuất giao hàng: **{p['Phương án']}** – {p['Kết quả']}, hạn {gio(x['han'])}; chi phí "
+                  f"~{p['Chi phí (VND)']:,.0f} VND. Sản xuất giữ nguyên kế hoạch." if p else
+                  f"Không phương án giao hàng nào kịp hạn {gio(x['han'])}: báo khách ngay, giao tách đợt.")
     for d in (dx or k0)["don"]["don"]:
+        xe_tre = x and d["Đơn"] == x["don"]["id"]
         gh.append(f"{d['Đơn']} (khách {d['Khách']}, {d['Số lượng']:.0f} {d['Mã']}, {d['Hạn']}): "
-                  f"**{d['Trạng thái']}** – {d['Ghi chú']}.")
+                  + (f"**hàng đủ nhưng xe {x['xe']['id']} trễ** – {d['Ghi chú']}, cần phương án giao hàng."
+                     if xe_tre else f"**{d['Trạng thái']}** – {d['Ghi chú']}."))
     tre0 = [d["Đơn"] for d in k0["don"]["don"] if d["Trạng thái"] != "Kịp"]
     if tre0:
         gh.append(f"Nếu không làm gì: {', '.join(tre0)} có nguy cơ trễ.")
