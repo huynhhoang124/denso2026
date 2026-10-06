@@ -1,4 +1,5 @@
-# Giao diện "War Room" tối cho demo D3. Streamlit nạp file này khi chạy từ thư mục demo (run.bat làm vậy).
+# Giao diện "War Room" tối cho demo D3. Streamlit (kể cả Community Cloud) chỉ đọc file này ở thư mục gốc repo,
+# nên chạy từ gốc: streamlit run demo/app.py (run.bat làm vậy).
 [theme]
 base = "dark"
 primaryColor = "#3987e5"

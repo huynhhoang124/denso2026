@@ -16,16 +16,17 @@ Cần Python 3.10 trở lên.
 
 ```bash
 cd C:\denso2026\demo            # hoặc: cd denso2026/demo
-python -m pip install pandas networkx streamlit plotly pyyaml pytest
+python -m pip install -r requirements.txt pytest
 python -m pytest -q             # 95 passed
-streamlit run app.py            # mở http://localhost:8501 (chạy từ thư mục demo để nạp giao diện tối)
+cd ..
+streamlit run demo/app.py       # mở http://localhost:8501 (chạy từ gốc repo để nạp .streamlit/config.toml)
 ```
 
 Nên dùng `python -m pytest` thay cho `pytest`, để chắc chắn test chạy đúng bộ Python đã cài thư viện.
 Trên Windows có thể bấm đúp `run.bat`: cài thư viện, chạy test rồi mở giao diện.
 
 Khi đang chạy, Streamlit chỉ tự nạp lại `app.py`. Sửa `engine.py`, `scenarios.py` hay `config.yaml` thì phải tắt
-rồi chạy lại (`run.bat` hoặc `streamlit run app.py`), nếu không giao diện vẫn dùng engine cũ và có thể báo lỗi.
+rồi chạy lại (`run.bat` hoặc `streamlit run demo/app.py` từ gốc repo), nếu không giao diện vẫn dùng engine cũ và có thể báo lỗi.
 
 Giao diện có bốn chế độ ở thanh bên: **Tổng quan** (8 kịch bản trên một màn hình), **Kịch bản có sẵn**,
 **Tự nhập sự cố** và **Diễn tập đầu ca**. Xem mục "Giao diện" bên dưới.
