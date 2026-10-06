@@ -188,7 +188,9 @@ xếp lớp bên dưới. Không thêm thư viện – chỉ theme Streamlit, CS
 
 - **Tổng quan:** 8 kịch bản dạng thẻ (mẫu nhiễu, mức cảnh báo, sản lượng không làm gì / đề xuất, tăng ca), bấm để mở.
 - **Trang sự cố:** mức cảnh báo, 4 chỉ số (sản lượng, thiếu, tăng ca, đồng hồ quyết định), thẻ đề xuất; rồi
-  01 bản đồ lan truyền trên đồ thị lớp Logic – mở sẵn ở lúc tệ nhất, nút ▶ phát lại từng 10 phút từ lúc sự cố, chuyển
+  01 bản đồ lan truyền dạng làn song song (bán thành phẩm + một làn mỗi mã: linh kiện → lắp ráp → thành phẩm → đơn →
+  xe → khách; chỉ gộp ở lắp ráp, đệm/linh kiện là thanh mức, đường đỏ = sự cố đã lan tới) – mở sẵn ở lúc tệ nhất,
+  nút ▶ phát lại từng 10 phút từ lúc sự cố, chuyển
   "không làm gì ↔ đề xuất"; 02 thẻ phương án, biểu đồ cứu được và thanh đồng hồ quyết định; 03 câu trả lời từng bộ phận;
   04 chi tiết kỹ thuật (Gantt, đệm, linh kiện, bảng số, đối chiếu IDEA.md).
 - Màu trạng thái cố định theo nghĩa (dừng/hỏng, hết/cạn, đói hàng, bị chặn/đầy, tăng tốc, đổi mã), luôn kèm chú giải
