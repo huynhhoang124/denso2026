@@ -636,15 +636,16 @@ def danh_gia(dc: DayChuyen, nhieu: list[Nhieu], pa: PhuongAn, kq_goc: KetQua | N
 
     gio_tren_chuan = sum(kq.tren_chuan.values()) / 60
     cp = dc.chi_phi
-    chi_phi = ((tc_de_xuat or 0) / 60 * dc.so_nguoi * cp.get("tang_ca_nguoi_gio", 0)
-               + gio_tren_chuan * cp.get("hao_mon_may_gio_tren_chuan", 0)
-               + kq.so_lan_doi_ma * cp.get("doi_ma_lan", 0) + chi_phi_them)
+    chi_phi_ct = {"tăng ca": (tc_de_xuat or 0) / 60 * dc.so_nguoi * cp.get("tang_ca_nguoi_gio", 0),
+                  "hao mòn chạy trên chuẩn": gio_tren_chuan * cp.get("hao_mon_may_gio_tren_chuan", 0),
+                  "đổi mã": kq.so_lan_doi_ma * cp.get("doi_ma_lan", 0), "khác": chi_phi_them}
+    chi_phi = sum(chi_phi_ct.values())
     xao_tron += kq.so_lan_doi_ma + (1 if tc_de_xuat else 0) + (1 if gio_tren_chuan > 0 else 0)
     muc_xt = "Không" if xao_tron == 0 else "Thấp" if xao_tron <= 2 else "Trung bình" if xao_tron <= 4 else "Cao"
     goc = kq_goc.san_luong() if kq_goc else kq.san_luong()
     return {"pa": pa, "kq": kq, "san_luong": kq.san_luong(), "cuu_duoc": kq.san_luong() - goc,
             "tang_ca_ke_hoach": tc_ke_hoach, "tang_ca_de_xuat": tc_de_xuat, "don": don, "giu_don": giu_don,
-            "chi_phi": chi_phi, "xao_tron": xao_tron, "muc_xao_tron": muc_xt, "gio_tren_chuan": gio_tren_chuan,
+            "chi_phi": chi_phi, "chi_phi_ct": chi_phi_ct, "xao_tron": xao_tron, "muc_xao_tron": muc_xt, "gio_tren_chuan": gio_tren_chuan,
             "ghi_chu": "; ".join(g for g in ghi_chu if g)}
 
 
@@ -1407,3 +1408,108 @@ def thong_diep(dc: DayChuyen, pt: PhanTich) -> dict[str, list[str]]:
     if pt.muc == "Đỏ":
         gh.append("Mức Đỏ: báo khách sớm, đề xuất giao tách đợt.")
     return {"Bảo trì": bt, "Kế hoạch": kh, "Giao hàng & Sales": gh}
+
+
+# ---------------------------------------------------------------- giải thích phương án đề xuất
+CACH_LAM = {1: "dồn việc của điểm bị sự cố sang các máy còn chạy, chia theo tỷ lệ công suất tối đa để các máy cùng mức tải",
+            2: "cho máy còn chạy lên trên chuẩn, tới công suất tối đa cho phép",
+            3: "đổi thứ tự sản xuất: chạy mã còn đủ điều kiện trước, quay lại mã bị thiếu khi có hàng",
+            4: "tăng ca sau giờ ca chính", 5: "chuyển sang line khác / ca sau", 6: "báo khách, giao tách đợt"}
+
+
+def giai_thich_de_xuat(dc: DayChuyen, pt: PhanTich) -> dict:
+    """Vì sao chọn phương án đề xuất (so với từng phương án khác) và nó tối ưu thế nào – sinh từ chính các con số
+    engine đã tính, theo đúng luật của chon_de_xuat: giữ mọi đơn → ít tăng ca nhất → bậc thấp nhất → rẻ nhất."""
+    gh = pt.giao_hang if pt.giao_hang and pt.giao_hang["tre"] > 0 else None
+    if gh:
+        p, kip = gh["de_xuat"], [x for x in gh["phuong_an"] if x["Kịp hạn"]]
+        k0 = pt.khong_lam_gi
+        vi_sao = [f"Sản xuất không bị ảnh hưởng ({k0['san_luong']:.0f}/{dc.ke_hoach} sp, không cần tăng ca) – vấn đề "
+                  f"nằm ở xe {gh['xe']['id']}: hàng đến khách {gio(gh['gio_den'])}, trễ {thoi_luong(gh['tre'])} so "
+                  f"với hạn {gio(gh['han'])}. Đổi kế hoạch sản xuất không giải quyết được.",
+                  "Luật chọn: chỉ xét phương án giao **kịp hạn**, trong đó lấy phương án **rẻ nhất**."]
+        if p:
+            vi_sao.append(f"Có {len(kip)} phương án kịp hạn; **{p['Phương án']}** rẻ nhất "
+                          f"(~{p['Chi phí (VND)']:,.0f} VND).")
+        loai = [(x["Phương án"], f"{x['Kết quả']} – " + ("đắt hơn" if x["Kịp hạn"] else "không kịp hạn cho đủ đơn")
+                 + ("; vẫn nên làm song song để khách chủ động" if x["Phương án"].startswith("Báo khách") else ""))
+                for x in gh["phuong_an"] if x is not p]
+        du = gh["han"] - phut(gh["xe"]["gio_di"]) - int(gh["xe"]["duong_gio"] * 60)
+        toi_uu = ([f"Giữ nguyên giờ đi cũ {gh['xe']['gio_di']} bằng xe ngoài → {p['Kết quả']}, dư {thoi_luong(du)} "
+                   f"so với hạn."] if p else ["Không có cách giao kịp: báo khách ngay, thỏa thuận giao tách đợt."])
+        toi_uu += ["Không tốn tăng ca, không xáo trộn kế hoạch sản xuất.",
+                   f"Đã kiểm tra lan ngược: kho thành phẩm cao nhất {gh['ton_kho_dinh']:.0f}/{gh['suc_chua_kho']} sp "
+                   + ("→ đầy, chuyền sẽ bị chặn – cần xử lý kho." if gh["kho_day"] else "→ chưa đầy, chuyền không bị chặn.")]
+        return {"ten": p["Phương án"] if p else None, "vi_sao": vi_sao, "loai": loai, "toi_uu": toi_uu}
+
+    dx, k0 = pt.de_xuat, pt.khong_lam_gi
+    tc = lambda r: thoi_luong(r["tang_ca_de_xuat"]) if r["tang_ca_de_xuat"] is not None else "> giới hạn"
+    if dx is None:
+        return {"ten": None,
+                "vi_sao": ["Không phương án nào giữ được mọi đơn, kể cả khi tăng ca tới giới hạn."],
+                "loai": [(r["pa"].ten, r["pa"].ly_do or "vẫn trễ đơn") for r in pt.phuong_an if r["pa"].bac >= 1],
+                "toi_uu": ["Chuyển line / ca sau, báo khách sớm và giao tách đợt."]}
+
+    khoa = lambda r: (r["tang_ca_de_xuat"], r["pa"].bac, r["chi_phi"])
+    kha_thi = sorted((r for r in pt.phuong_an if r["giu_don"] and r["pa"].bac >= 1), key=khoa)
+    vi_sao = [f"So với không làm gì: sản lượng ca {k0['san_luong']:.0f} → **{dx['san_luong']:.0f} sp** "
+              f"(cứu {dx['cuu_duoc']:+.0f})" + ("; không làm gì thì trễ đơn." if not k0["giu_don"] else "."),
+              "Luật chọn: trong các phương án **giữ được mọi đơn**, lấy phương án **ít tăng ca nhất**; bằng nhau thì "
+              "lấy **bậc thấp nhất** trên thang xử lý (ít xáo trộn); vẫn bằng thì lấy **rẻ nhất**."]
+    ke = kha_thi[1] if len(kha_thi) > 1 else None
+    if ke is None:
+        vi_sao.append("Đây là phương án **duy nhất** giữ được mọi đơn.")
+    elif ke["tang_ca_de_xuat"] > dx["tang_ca_de_xuat"]:
+        vi_sao.append(f"Quyết định ở bước 1: tăng ca **{tc(dx)}**, ít nhất trong {len(kha_thi)} phương án giữ đơn "
+                      f"(kế tiếp là {ke['pa'].ten}: {tc(ke)}).")
+    elif ke["pa"].bac > dx["pa"].bac:
+        vi_sao.append(f"Quyết định ở bước 2: cùng tăng ca {tc(dx)} với {ke['pa'].ten} nhưng ở bậc thấp hơn "
+                      f"({BAC[dx['pa'].bac]}) – dùng bước nhẹ nhất là đủ.")
+    else:
+        vi_sao.append(f"Quyết định ở bước 3: cùng tăng ca và cùng bậc với {ke['pa'].ten} nhưng rẻ hơn "
+                      f"~{ke['chi_phi'] - dx['chi_phi']:,.0f} VND.")
+
+    loai = []
+    for r in pt.phuong_an:
+        p = r["pa"]
+        if r is dx or p.bac == 0:
+            continue
+        if not r["giu_don"]:
+            ly = p.ly_do or "vẫn trễ đơn"
+        elif r["tang_ca_de_xuat"] > dx["tang_ca_de_xuat"]:
+            ly = f"cần tăng ca {tc(r)}" + (f", nhiều hơn {thoi_luong(r['tang_ca_de_xuat'] - dx['tang_ca_de_xuat'])}"
+                                           if dx["tang_ca_de_xuat"] else " – đề xuất không cần tăng ca")
+            if r["chi_phi"] < dx["chi_phi"] - 0.5:
+                ly += f" (dù rẻ hơn ~{dx['chi_phi'] - r['chi_phi']:,.0f} VND)"
+        elif p.bac > dx["pa"].bac:
+            ly = f"cùng tăng ca nhưng dùng bước nặng hơn ({BAC.get(p.bac, p.bac)}) – không cần thiết"
+        elif r["chi_phi"] > dx["chi_phi"] + 0.5:
+            ly = f"cùng tăng ca, cùng bậc nhưng đắt hơn ~{r['chi_phi'] - dx['chi_phi']:,.0f} VND"
+        else:
+            ly = "kết quả tương đương"
+        if r["giu_don"] and r["san_luong"] > dx["san_luong"] + 0.5:
+            ly += f"; làm được nhiều hơn {r['san_luong'] - dx['san_luong']:.0f} sp trong ca nhưng không cần cho đơn"
+        loai.append((p.ten, ly))
+
+    p, kq = dx["pa"], dx["kq"]
+    # phương án riêng của kịch bản tự mô tả cách làm; phương án chung dùng mô tả theo bậc
+    toi_uu = [f"Cách làm: {p.ten} – {p.mo_ta}." if p.mo_ta else f"Cách làm: {CACH_LAM.get(p.bac, BAC.get(p.bac, ''))}."]
+    if dx["gio_tren_chuan"] > 0:
+        toi_uu.append(f"Máy chạy trên chuẩn tổng {dx['gio_tren_chuan']:.1f} giờ-máy, mỗi máy không quá "
+                      f"{dc.tren_chuan_max // 60} giờ/ca (giới hạn hao mòn).")
+    if kq.so_lan_doi_ma:
+        toi_uu.append(f"{kq.so_lan_doi_ma} lần đổi mã ({kq.so_lan_doi_ma * dc.doi_ma} phút mất máy) – đổi lấy việc "
+                      "chuyền không phải đứng chờ.")
+    if pt.thu_tu_sua is not None and len(pt.thu_tu_sua) > 1:
+        a, b = pt.thu_tu_sua.iloc[0], pt.thu_tu_sua.iloc[1]
+        cot = next(c for c in pt.thu_tu_sua.columns if c.startswith("Tăng ca"))
+        toi_uu.append(f"Một tổ bảo trì: sửa theo thứ tự **{a['Thứ tự sửa']}** – tăng ca {a[cot]} phút, so với "
+                      f"{b[cot]} phút nếu sửa {b['Thứ tự sửa']}.")
+    toi_uu.append(f"Tăng ca **{tc(dx)}** – vừa đủ để giữ mọi đơn và trả các đệm về mục tiêu, không dư."
+                  if dx["tang_ca_de_xuat"] else "Không cần tăng ca.")
+    kem = [g for g in dx["ghi_chu"].split("; ") if g and g != p.mo_ta]
+    if kem:
+        toi_uu.append(f"Kèm theo: {'; '.join(kem)}.")
+    ct = [f"{k} {v:,.0f}" for k, v in dx["chi_phi_ct"].items() if v > 0.5]
+    toi_uu.append(f"Chi phí ~{dx['chi_phi']:,.0f} VND" + (f" = {' + '.join(ct)}." if ct else "."))
+    return {"ten": p.ten, "vi_sao": vi_sao, "loai": loai, "toi_uu": toi_uu}

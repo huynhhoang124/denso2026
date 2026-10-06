@@ -282,3 +282,13 @@ def test_th7_de_xuat_giao_hang_thue_xe_ngoai_va_bao_giao_hang():
     assert pt.giao_hang["de_xuat"]["Phương án"].startswith("Thuê xe ngoài")
     assert "Giao hàng & Sales" in pt.gui_cho
     assert pt.thong_diep["Giao hàng & Sales"][0].startswith("Đề xuất giao hàng: **Thuê xe ngoài")
+
+
+@pytest.mark.parametrize("ma", ["goc", "th1", "th2", "th3", "th4", "th5", "th6", "th7"])
+def test_giai_thich_khop_phuong_an_de_xuat(ma):
+    from engine import giai_thich_de_xuat
+    pt = kb(ma)[0]
+    g = giai_thich_de_xuat(dc, pt)
+    ten = pt.giao_hang["de_xuat"]["Phương án"] if ma == "th7" else pt.de_xuat["pa"].ten
+    assert g["ten"] == ten and g["vi_sao"] and g["toi_uu"]
+    assert all(t != ten for t, _ in g["loai"])  # phương án được chọn không nằm trong danh sách bị loại

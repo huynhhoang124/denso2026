@@ -10,7 +10,8 @@ import plotly.graph_objects as go
 import streamlit as st
 
 from engine import (DAI_LUONG, EPS, DayChuyen, Nhieu, ban_do_rui_ro, de_xuat_muc_dem, dong_ho_quyet_dinh,
-                    dong_thoi_gian, gio, khoang_trang_thai, phan_tich, thoi_luong, xac_suat_hoan_thanh)
+                    dong_thoi_gian, giai_thich_de_xuat, gio, khoang_trang_thai, phan_tich, thoi_luong,
+                    xac_suat_hoan_thanh)
 from giao_dien import (BE_MAT, BE_MAT_2, CHU, CHU_2, CHU_MO, DANH_MUC, LUOI, MAU_MUC, MAU_TT, NHAN, NHOM_TT, TRUC, TRUNG_TINH,
                        BIEU_TUONG_MUC, badge_muc, chu_giai, css, e, html_, md, rgba, the_kpi, tieu_de_muc, ve)
 from scenarios import chay, kich_ban
@@ -775,8 +776,23 @@ def trang_su_co(pt, rieng: dict, giay: float, tieu_de: str, tinh_huong: str, tai
         st.caption("Engine chạy lại từng phương án với giờ quyết khác nhau: trước giờ quyết dây chuyền chạy như không "
                    "làm gì. Mốc xanh = giờ muộn nhất mà sản lượng và giờ tăng ca chưa xấu đi.")
 
-    # ---- 03 bộ phận
-    tieu_de_muc("03", "Câu trả lời cho từng bộ phận", "Cùng một nguồn số liệu, mỗi bộ phận một câu hỏi")
+    # ---- 03 phương án đề xuất
+    gt = giai_thich_de_xuat(dc, pt)
+    tieu_de_muc("03", "Phương án đề xuất – vì sao chọn và tối ưu thế nào",
+                f"{gt['ten'] or 'Không có phương án giữ được mọi đơn'} · sinh từ chính các con số ở mục 02")
+    c1, c2 = st.columns(2)
+    with c1:
+        html_("<div class='wr-kpi-label'>Vì sao chọn</div>")
+        st.markdown("\n".join(f"- {x}" for x in gt["vi_sao"]))
+        if gt["loai"]:
+            html_("<div class='wr-kpi-label' style='margin-top:.6rem'>Vì sao không chọn phương án khác</div>")
+            st.markdown("\n".join(f"- **{t}**: {l}" for t, l in gt["loai"]))
+    with c2:
+        html_("<div class='wr-kpi-label'>Tối ưu thế nào</div>")
+        st.markdown("\n".join(f"- {x}" for x in gt["toi_uu"]))
+
+    # ---- 04 bộ phận
+    tieu_de_muc("04", "Câu trả lời cho từng bộ phận", "Cùng một nguồn số liệu, mỗi bộ phận một câu hỏi")
     tab_bt, tab_kh, tab_gh = st.tabs(["🔧 Bảo trì", "📋 Kế hoạch sản xuất", "🚚 Giao hàng & Sales"])
     for tab, bp in ((tab_bt, "Bảo trì"), (tab_kh, "Kế hoạch"), (tab_gh, "Giao hàng & Sales")):
         with tab:
@@ -825,7 +841,7 @@ def trang_su_co(pt, rieng: dict, giay: float, tieu_de: str, tinh_huong: str, tai
                   f"{e(tv['ket_luan']['ten'])} → chỉ giữ lại <b>{tv['so_giu']} sp</b></div></div>")
 
     # ---- 04 chi tiết
-    tieu_de_muc("04", "Chi tiết kỹ thuật", "Cho người muốn kiểm tra từng con số")
+    tieu_de_muc("05", "Chi tiết kỹ thuật", "Cho người muốn kiểm tra từng con số")
     ten_pa = [r["pa"].ten for r in pt.phuong_an]
     chon_ct = st.selectbox("Xem chi tiết theo phương án", ten_pa,
                            index=ten_pa.index(dx["pa"].ten) if dx else 0, key=f"ct_{khoa}")
