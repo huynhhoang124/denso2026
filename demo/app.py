@@ -11,7 +11,7 @@ import streamlit as st
 
 from engine import (DAI_LUONG, EPS, DayChuyen, Nhieu, ban_do_rui_ro, de_xuat_muc_dem, dong_ho_quyet_dinh,
                     dong_thoi_gian, gio, khoang_trang_thai, phan_tich, thoi_luong, xac_suat_hoan_thanh)
-from giao_dien import (BE_MAT, CHU, CHU_2, CHU_MO, DANH_MUC, LUOI, MAU_MUC, MAU_TT, NHAN, NHOM_TT, TRUC, TRUNG_TINH,
+from giao_dien import (BE_MAT, BE_MAT_2, CHU, CHU_2, CHU_MO, DANH_MUC, LUOI, MAU_MUC, MAU_TT, NHAN, NHOM_TT, TRUC, TRUNG_TINH,
                        BIEU_TUONG_MUC, badge_muc, chu_giai, css, e, html_, md, rgba, the_kpi, tieu_de_muc, ve)
 from scenarios import chay, kich_ban
 
@@ -81,45 +81,78 @@ def pt_tram(p: float) -> str:
     return f"{p:.1%}" if 0 < p < 1 and f"{p:.0%}" in ("0%", "100%") else f"{p:.0%}"
 
 
-# ---------------------------------------------------------------- bản đồ lan truyền (lớp Logic, có hoạt ảnh)
-def vi_tri() -> dict:
-    pos, G = {}, dc.G
-    dong = [n for n in ["DAP", "B1", "GC", "B2", "LR", dc.fg["id"]] if n in G] or dc.thu_tu
-    for i, n in enumerate(dong):
-        pos[n] = (i * 1.6, 0)
-    for s in dc.thu_tu:
-        ms = dc.may_cua(s)
-        for j, m in enumerate(ms):
-            pos[m] = (pos[s][0] + (j - (len(ms) - 1) / 2) * 0.55, 1.1)
-        pos[f"NG-{s}"] = (pos[s][0], -0.9)
-    lks = list(dc.linh_kien)
-    for j, lk in enumerate(lks):
-        x = pos[dc.cd_lap][0] + (j - (len(lks) - 1) / 2) * 0.9
-        pos[lk] = (x, -1.8)
-        pos[dc.linh_kien[lk]["nha_cung_cap"]] = (x, -2.7)
-    x0 = pos[dc.fg["id"]][0]
-    for j, sp in enumerate(dc.san_pham):
-        pos[sp] = (x0 + 1.4, 0.7 - j * 1.4)
-    for j, d in enumerate(dc.don_hang):
-        pos[d["id"]] = (x0 + 2.8, 1.1 - j * 1.1)
-    kh = [n for n, a in G.nodes(data=True) if a["loai"] == "khach_hang"]
-    for j, n in enumerate(kh):
-        pos[n] = (x0 + 4.2, 0.6 - j * 1.4)
-    xe = [n for n, a in G.nodes(data=True) if a["loai"] == "chuyen_giao"]
-    for j, n in enumerate(xe):
-        pos[n] = (x0 + 4.2, 1.6 + j * 0.8)
-    for n in G:
-        pos.setdefault(n, (0, -3.5))
-    return pos
-
-
-POS = vi_tri()
-NUT = list(dc.G.nodes(data=True))
-CANH = list(dc.G.edges())
-HINH = {"cong_doan": "square", "may": "circle", "dem": "diamond", "kho": "square", "linh_kien": "triangle-up",
-        "nha_cung_cap": "triangle-down", "san_pham": "hexagon", "don_hang": "star", "khach_hang": "pentagon",
-        "chuyen_giao": "cross", "nguoi": "circle"}
+# ---------------------------------------------------------------- bản đồ lan truyền: các làn song song (có hoạt ảnh)
+# Mỗi làn chạy thẳng trái → phải; các làn chỉ gộp ở công đoạn lắp ráp (bán thành phẩm + linh kiện) rồi tách theo mã.
+X_MAX, CAO_LAN0, CAO_HANG = 130, 2.4, 1.15
+COT = {"lan": 0.0, "ncc": 14.5, "lk": 22.5, "dau": 14.5, "cuoi": 62.0, "lap": (65.0, 76.0), "tp": (79.0, 89.0),
+       "don": (92.0, 106.0), "xe": (109.0, 117.0), "kh": (120.0, 129.0)}
+BINH_THUONG, MAU_THANH = "#5b6b8f", "#7d8aa8"
 XAU = set(MAU_TT) - {"chạy", "xong", "tăng tốc", "trên chuẩn"}
+
+
+def bo_cuc(don: list[dict]) -> dict:
+    """Toạ độ mọi hộp, máy, làn và đoạn nối (chỉ đoạn ngang trong làn) – suy ra từ cấu hình dây chuyền."""
+    hop, may, doan, lan = {}, {}, [], []
+    yc0 = -CAO_LAN0 / 2
+    # làn 0: các công đoạn trước lắp ráp xen với đệm
+    chuoi = []
+    for cd in dc.thu_tu:
+        if cd == dc.cd_lap:
+            break
+        chuoi.append(cd)
+        if dc.dem_sau.get(cd):
+            chuoi.append(dc.dem_sau[cd])
+    rong = {n: (max(11.0, 3.6 * len(dc.may_cua(n)) + 1.5) if dc.loai(n) == "cong_doan" else 8.0) for n in chuoi}
+    khe = (COT["cuoi"] - COT["dau"] - sum(rong.values())) / max(1, len(chuoi))
+    x = COT["dau"]
+    for n in chuoi:
+        if dc.loai(n) == "cong_doan":
+            hop[n] = (x, x + rong[n], yc0 - 0.95, yc0 + 0.95)
+        else:
+            hop[n] = (x, x + rong[n], yc0 - 0.16, yc0 + 0.16)
+        x += rong[n] + khe
+    for a, b in zip(chuoi, chuoi[1:] + [dc.cd_lap]):
+        doan.append((hop[a][1], hop[b][0] if b in hop else COT["lap"][0], yc0, a, b))
+    lan.append(("BÁN THÀNH<br>PHẨM", "mọi mã dùng chung", 0.0, -CAO_LAN0))
+    # làn theo mã sản phẩm: linh kiện → lắp ráp → thành phẩm → đơn → xe → khách
+    y = -CAO_LAN0
+    for sp, info in dc.san_pham.items():
+        ds = [d for d in don if d["Mã"] == sp] or [None]
+        tren, duoi = y, y - CAO_HANG * len(ds)
+        yr = [tren - CAO_HANG * (i + 0.5) for i in range(len(ds))]
+        lk = info["linh_kien"]
+        ncc = dc.linh_kien[lk]["nha_cung_cap"]
+        hop[ncc] = (COT["ncc"], COT["ncc"] + 5.5, yr[0] - 0.3, yr[0] + 0.3)
+        hop[lk] = (COT["lk"], COT["lk"] + 13, yr[0] - 0.16, yr[0] + 0.16)
+        doan += [(hop[ncc][1], hop[lk][0], yr[0], ncc, lk), (hop[lk][1], COT["lap"][0], yr[0], lk, dc.cd_lap)]
+        tp = f"TP@{sp}"
+        hop[tp] = (*COT["tp"], duoi + 0.12, tren - 0.12)
+        doan.append((COT["lap"][1], COT["tp"][0], yr[0], dc.cd_lap, tp))
+        for d, yd in zip(ds, yr):
+            if d is None:
+                continue
+            ma = d["Đơn"]
+            hop[ma] = (*COT["don"], yd - 0.45, yd + 0.45)
+            doan.append((COT["tp"][1], COT["don"][0], yd, tp, ma))
+            cfg = next((c for c in dc.don_hang if c["id"] == ma), {})
+            truoc = ma
+            if cfg.get("chuyen"):
+                hop[cfg["chuyen"]] = (*COT["xe"], yd - 0.35, yd + 0.35)
+                doan.append((COT["don"][1], COT["xe"][0], yd, ma, cfg["chuyen"]))
+                truoc = cfg["chuyen"]
+            if cfg.get("khach"):
+                kh = f"KH@{ma}"
+                hop[kh] = (*COT["kh"], yd - 0.3, yd + 0.3)
+                doan.append((hop[truoc][1], COT["kh"][0], yd, truoc, kh))
+        lan.append((f"MÃ {sp}", f"linh kiện {lk}", tren, duoi))
+        y = duoi
+    hop[dc.cd_lap] = (*COT["lap"], y + 0.12, -0.25)
+    for cd in [n for n in chuoi if dc.loai(n) == "cong_doan"] + [dc.cd_lap]:
+        ms, (x0, x1, *_) = dc.may_cua(cd), hop[cd]
+        for j, m in enumerate(ms):
+            may[m] = (x0 + (x1 - x0) * (j + 1) / (len(ms) + 1), yc0 - 0.12)
+    hop["TONG"] = (COT["tp"][0], COT["kh"][1], yc0 - 0.16, yc0 + 0.16)
+    return {"hop": hop, "may": may, "doan": doan, "lan": lan, "day": y}
 
 
 def trang_thai_nut(kq, t: int, t_inc: int, don_tre: set) -> dict[str, str]:
@@ -145,16 +178,9 @@ def trang_thai_nut(kq, t: int, t_inc: int, don_tre: set) -> dict[str, str]:
     return s
 
 
-def nhan_nut(n: str, a: dict, kq, t: int) -> str:
-    if a["loai"] == "dem":
-        return f"{n} · {kq.dem[n][min(t + 1, kq.N)]:.0f}"
-    if a["loai"] == "linh_kien":
-        return f"{n} · {kq.lk[n][min(t + 1, kq.N)]:.0f}"
-    if a["loai"] == "kho":
-        return f"TP · {kq.M[min(t, kq.N)]:.0f}"
-    if a["loai"] == "nguoi":
-        return a["ten"].split(" (")[0]
-    return n
+def _chu_nhat(h) -> tuple[list, list]:
+    x0, x1, y0, y1 = h
+    return [x0, x1, x1, x0, x0], [y0, y0, y1, y1, y0]
 
 
 def ban_do_lan_truyen(r: dict, nhieu: list[Nhieu], giao_hang: dict | None = None, buoc: int = 10) -> go.Figure:
@@ -162,43 +188,187 @@ def ban_do_lan_truyen(r: dict, nhieu: list[Nhieu], giao_hang: dict | None = None
     den = ket_thuc(r)
     t_inc = min((n.t0 for n in nhieu), default=0)
     goc = {n.diem for n in nhieu}
-    don_tre = {d["Đơn"] for d in r["don"]["don"] if d["Trạng thái"] != "Kịp" and d["Đơn"] in dc.G}
+    ds_don = [d for d in r["don"]["don"] if d["Mã"] in dc.san_pham]
+    tt_don = {d["Đơn"]: d["Trạng thái"] for d in ds_don}
+    don_tre = {d for d, v in tt_don.items() if v != "Kịp"}
     if giao_hang and giao_hang["tre"] > 0:  # sự cố giao hàng (TH7): đơn trên chuyến xe trễ, nếu không làm gì
-        don_tre |= {u for u in dc.G.predecessors(giao_hang["xe"]["id"]) if dc.loai(u) == "don_hang"}
+        for u in dc.G.predecessors(giao_hang["xe"]["id"]):
+            if dc.loai(u) == "don_hang":
+                don_tre.add(u)
+                tt_don[u] = f"Trễ – xe đến {gio(giao_hang['gio_den'])}"
+    bc = bo_cuc(ds_don)
+    hop, doan = bc["hop"], bc["doan"]
+    don_cua = {sp: [d["Đơn"] for d in ds_don if d["Mã"] == sp] for sp in dc.san_pham}
+    dong_hop = [k for k in hop if k != "TONG"]
+    ten_cd = {c["id"]: c for c in dc.cfg["cong_doan"]}
 
     def du_lieu(t):
-        s = trang_thai_nut(kq, t, t_inc, don_tre)
-        mau = [MAU_TT.get(s.get(n, "chạy"), TRUNG_TINH) for n, _ in NUT]
-        vien = ["#ffffff" if n in goc and t >= t_inc else rgba("#ffffff", .25) for n, _ in NUT]
-        rong = [3 if n in goc and t >= t_inc else 1 for n, _ in NUT]
-        chu = [nhan_nut(n, a, kq, t) for n, a in NUT]
-        hover = [f"<b>{e(a['ten'])}</b><br>{e(s.get(n, 'bình thường'))}" +
-                 ("<br><b>ĐIỂM SỰ CỐ</b>" if n in goc else "") for n, a in NUT]
-        xau = [(u, v) for u, v in CANH if s.get(u) in XAU and s.get(v) in XAU or
-               (u in goc and t >= t_inc and s.get(v) in XAU) or (v in goc and t >= t_inc and s.get(u) in XAU)]
-        ex, ey = [], []
-        for u, v in xau:
-            ex += [POS[u][0], POS[v][0], None]
-            ey += [POS[u][1], POS[v][1], None]
-        so_xau = sum(1 for n, _ in NUT if s.get(n) in XAU)
-        canh_do = go.Scatter(x=ex or [None], y=ey or [None], mode="lines", hoverinfo="skip", showlegend=False,
-                             line=dict(color=rgba("#e66767", .85), width=4))
-        nut = go.Scatter(
-            x=[POS[n][0] for n, _ in NUT], y=[POS[n][1] for n, _ in NUT], mode="markers+text", text=chu,
-            textposition="bottom center", textfont=dict(color=CHU_2, size=11), hovertext=hover, hoverinfo="text",
-            showlegend=False,
-            marker=dict(size=[34 if a["loai"] in ("cong_doan", "kho") else 18 if a["loai"] == "nguoi" else 24
-                              for _, a in NUT],
-                        symbol=[HINH.get(a["loai"], "circle") for _, a in NUT], color=mau,
-                        line=dict(color=vien, width=rong)))
-        tieu = (f"<b>{gio(t)}</b>  <span style='color:{CHU_MO}'>"
-                + ("trước sự cố" if t < t_inc else f"{so_xau} điểm bị ảnh hưởng") + "</span>")
-        return [canh_do, nut], tieu, so_xau
+        song = t >= t_inc
+        s = trang_thai_nut(kq, t, t_inc, {d for d in don_tre if d in dc.G} | {d for d in don_tre if d not in dc.G})
 
-    # nền: mọi cạnh xám + mũi tên
-    nen = go.Scatter(x=sum(([POS[u][0], POS[v][0], None] for u, v in CANH), []),
-                     y=sum(([POS[u][1], POS[v][1], None] for u, v in CANH), []), mode="lines",
-                     line=dict(color=TRUC, width=1.2), hoverinfo="skip", showlegend=False)
+        def tt(k: str) -> str:
+            if k.startswith("KH@"):
+                return "dừng máy" if song and k[3:] in don_tre else "chạy"
+            if k.startswith("TP@"):
+                return "dừng máy" if song and don_tre & set(don_cua[k[3:]]) else "chạy"
+            return s.get(k, "chạy")
+
+        def la_goc(k: str) -> bool:
+            return song and (k in goc or k.startswith("TP@") and k[3:] in goc)
+
+        def xau(k: str) -> bool:
+            return tt(k) in XAU
+
+        tx, ty, tc, ts = [], [], [], []  # chữ: x, y, nội dung, màu
+
+        def chu(x, y, noi_dung, mau=CHU_2):
+            tx.append(x)
+            ty.append(y)
+            tc.append(noi_dung)
+            ts.append(mau)
+
+        # hộp: mỗi hộp một trace để mỗi khung hình đổi được màu nền / viền riêng
+        vet_hop = []
+        for k in dong_hop:
+            h, trang = hop[k], tt(k)
+            loai = "thanh" if dc.loai(k) in ("dem", "linh_kien") else "hop"
+            if loai == "thanh":
+                x0, x1, y0, y1 = h
+                vet_hop.append(go.Scatter(x=_chu_nhat(h)[0], y=_chu_nhat(h)[1], mode="lines", fill="toself",
+                                          fillcolor=BE_MAT, hoverinfo="skip", showlegend=False,
+                                          line=dict(color="#ffffff" if la_goc(k) else TRUC, width=3 if la_goc(k) else 1)))
+                continue
+            mau = MAU_TT.get(trang, TRUNG_TINH)
+            nen = rgba(mau, .28) if trang in XAU else rgba(mau, .2) if trang in ("tăng tốc", "trên chuẩn") else BE_MAT_2
+            vien = "#ffffff" if la_goc(k) else mau if trang != "chạy" else TRUC
+            vet_hop.append(go.Scatter(x=_chu_nhat(h)[0], y=_chu_nhat(h)[1], mode="lines", fill="toself", fillcolor=nen,
+                                      hoverinfo="skip", showlegend=False,
+                                      line=dict(color=vien, width=3 if la_goc(k) else 1.5 if trang != "chạy" else 1)))
+
+        # phần tô của thanh mức (đệm, linh kiện, tổng sản lượng)
+        vet_muc = []
+        for k in [k for k in dong_hop if dc.loai(k) in ("dem", "linh_kien")] + ["TONG"]:
+            x0, x1, y0, y1 = hop[k]
+            tc_ = min(t + 1, kq.N)
+            if k == "TONG":
+                muc, tran, mau = kq.M[min(t, kq.N)], max(kq.ke_hoach_tong, 1), NHAN
+            elif dc.loai(k) == "dem":
+                muc, tran = kq.dem[k][tc_], dc.dem[k]["suc_chua"]
+                mau = MAU_TT[tt(k)] if tt(k) != "chạy" else MAU_THANH
+            else:
+                muc, tran = kq.lk[k][tc_], max(kq.tong_cung[k], 1)
+                mau = MAU_TT[tt(k)] if tt(k) != "chạy" else MAU_THANH
+            xe = x0 + (x1 - x0) * max(0.0, min(1.0, muc / tran))
+            hh = (x0, max(xe, x0 + 0.25), y0 + 0.03, y1 - 0.03)
+            vet_muc.append(go.Scatter(x=_chu_nhat(hh)[0], y=_chu_nhat(hh)[1], mode="lines", fill="toself",
+                                      fillcolor=mau, line=dict(width=0), hoverinfo="skip", showlegend=False))
+
+        # chữ trong / quanh từng hộp
+        for k in dong_hop:
+            x0, x1, y0, y1 = hop[k]
+            xm, ym, trang, loai = (x0 + x1) / 2, (y0 + y1) / 2, tt(k), dc.loai(k)
+            nhan_sc = "  <span style='color:#ffd84d'>⚡ SỰ CỐ</span>" if la_goc(k) else ""
+            if loai == "cong_doan":
+                c = ten_cd[k]
+                chu(xm, y1 - 0.25, f"<b>{e(c['ten'])}</b>{nhan_sc}", CHU)
+                chu(xm, y1 - 0.55, "đang chạy" if trang == "chạy" else e(trang),
+                    MAU_TT.get(trang, CHU_2) if trang not in ("chạy", "xong") else CHU_MO)
+                chu(xm, (y0 + 0.28) if k != dc.cd_lap else -CAO_LAN0 / 2 - 0.82, f"👥 {c.get('so_nguoi', '?')} người", CHU_MO)
+                if k == dc.cd_lap:
+                    for ten_lan, _, tren, duoi in bc["lan"][1:]:
+                        chu(xm, (tren + duoi) / 2 if duoi - tren > -1.2 else tren - CAO_HANG / 2,
+                            f"lắp {e(ten_lan.split()[-1])}", CHU_MO)
+            elif loai in ("dem", "linh_kien"):
+                tc_ = min(t + 1, kq.N)
+                if loai == "dem":
+                    muc, phu = kq.dem[k][tc_], f"/{dc.dem[k]['suc_chua']:.0f}"
+                    ten = f"Đệm {k}"
+                else:
+                    muc, ten = kq.lk[k][tc_], f"Linh kiện {k}"
+                    sap = sorted((p, q) for p, q in kq.lich_ve[k].items() if p > t and q > 0)
+                    phu = f" · lô {sap[0][1]:.0f} về {gio(sap[0][0])}" if sap else ""
+                mau = MAU_TT[trang] if trang != "chạy" else CHU_2
+                chu(xm, y1 + 0.2, f"<b>{e(ten)}</b>{nhan_sc}", CHU)
+                chu(xm, y0 - 0.22, f"<b>{muc:.0f}</b>{e(phu)}" + (f"  · {e(trang)}" if trang != "chạy" else ""), mau)
+            elif loai == "nha_cung_cap":
+                chu(xm, ym, f"<b>{e(k)}</b>", CHU_2)
+            elif k.startswith("TP@"):
+                sp = k[3:]
+                lam = kq.cum_sp[sp][min(t, kq.N)]
+                kh_sp = kq.ke_hoach_sp.get(sp, 0)
+                chu(xm, ym + 0.2, f"<b>Mã {e(sp)}</b>{nhan_sc}", CHU)
+                chu(xm, ym - 0.12, f"đã lắp {lam:.0f}" + (f" / {kh_sp:.0f}" if kh_sp else ""), CHU_2)
+            elif loai == "chuyen_giao":
+                xe_ = dc.chuyen.get(k, {})
+                chu(xm, ym + 0.13, ("<span style='color:#ffd84d'>⚡</span> " if la_goc(k) else "🚚 ") + f"<b>{e(k)}</b>", CHU)
+                phu = (f"đi trễ {gio(giao_hang['gio_di'])}" if giao_hang and giao_hang["xe"]["id"] == k and song
+                       else f"đi {xe_.get('gio_di', '')}")
+                chu(xm, ym - 0.16, e(phu), MAU_TT["dừng máy"] if trang in XAU else CHU_MO)
+            elif k.startswith("KH@"):
+                d = next(c for c in dc.don_hang if c["id"] == k[3:])
+                chu(xm, ym, f"<b>Khách {e(d['khach'])}</b>", CHU if trang in XAU else CHU_2)
+            else:  # đơn hàng
+                d = next(c for c in ds_don if c["Đơn"] == k)
+                chu(xm, ym + 0.25, f"<b>{e(k)}</b> · {d['Số lượng']:.0f} sp{nhan_sc}", CHU)
+                chu(xm, ym - 0.01, e(d["Hạn"]), CHU_MO)
+                v = tt_don[k]
+                if not song:
+                    chu(xm, ym - 0.27, "theo kế hoạch", CHU_MO)
+                else:
+                    chu(xm, ym - 0.27, ("✔ " if v == "Kịp" else "▲ " if v.startswith("Nguy") else "✘ ") + e(v),
+                        XANH_LA if v == "Kịp" else MAU_MUC["Vàng"] if v.startswith("Nguy") else "#f07c7c")
+        tong = kq.M[min(t, kq.N)]
+        x0, x1, y0, y1 = hop["TONG"]
+        chu((x0 + x1) / 2, y1 + 0.3, "<b>SẢN LƯỢNG HIỆU DỤNG CẢ CHUYỀN</b>", CHU_2)
+        chu((x0 + x1) / 2, y0 - 0.3, f"<b>{tong:.0f}</b> / {kq.ke_hoach_tong:.0f} kế hoạch", CHU)
+
+        # máy: chấm tròn trong thẻ công đoạn
+        ms = list(bc["may"])
+        mau_may = [MAU_TT.get(tt(m), TRUNG_TINH) if tt(m) != "chạy" else MAU_THANH for m in ms]
+        may = go.Scatter(
+            x=[bc["may"][m][0] for m in ms], y=[bc["may"][m][1] for m in ms], mode="markers", showlegend=False,
+            marker=dict(size=[22 if la_goc(m) else 18 for m in ms], color=mau_may,
+                        line=dict(color=["#ffffff" if la_goc(m) else rgba("#ffffff", .25) for m in ms],
+                                  width=[3 if la_goc(m) else 1 for m in ms])),
+            hovertext=[f"<b>{e(dc.ten(m))}</b><br>{e(tt(m))}" + ("<br><b>ĐIỂM SỰ CỐ</b>" if m in goc else "")
+                       for m in ms], hoverinfo="text")
+        for m in ms:
+            chu(bc["may"][m][0], bc["may"][m][1] - 0.3, e(m) + (" ⚡" if la_goc(m) else ""),
+                CHU if la_goc(m) else CHU_MO)
+
+        # đường lan đỏ: đoạn nối giữa hai điểm cùng bị ảnh hưởng (hoặc từ điểm sự cố tới điểm bị ảnh hưởng)
+        ex, ey, ax, ay, am = [], [], [], [], []
+        for x0, x1, y, u, v in doan:
+            do = (xau(u) and xau(v)) or (la_goc(u) and xau(v)) or (la_goc(v) and xau(u))
+            if do:
+                ex += [x0, x1, None]
+                ey += [y, y, None]
+            ax.append(x1 - 0.45)
+            ay.append(y)
+            am.append("#e66767" if do else TRUC)
+        canh_do = go.Scatter(x=ex or [None], y=ey or [None], mode="lines", hoverinfo="skip", showlegend=False,
+                             line=dict(color=rgba("#e66767", .9), width=5))
+        mui = go.Scatter(x=ax, y=ay, mode="markers", hoverinfo="skip", showlegend=False,
+                         marker=dict(symbol="triangle-right", size=11, color=am))
+        chu_ = go.Scatter(x=tx, y=ty, text=tc, mode="text", textfont=dict(color=ts, size=12), hoverinfo="skip",
+                          showlegend=False)
+        hover = go.Scatter(
+            x=[(hop[k][0] + hop[k][1]) / 2 for k in dong_hop], y=[(hop[k][2] + hop[k][3]) / 2 for k in dong_hop],
+            mode="markers", marker=dict(size=26, opacity=0), showlegend=False, hoverinfo="text",
+            hovertext=[f"<b>{e(dc.ten(k) if k in dc.G else k.replace('TP@', 'Thành phẩm mã ').replace('KH@', 'Khách của '))}"
+                       f"</b><br>{e(tt(k))}" + ("<br><b>ĐIỂM SỰ CỐ</b>" if la_goc(k) else "") for k in dong_hop])
+
+        bi = [n for n in dc.G if s.get(n) in XAU]
+        ten_bi = [dc.ten(n) if dc.loai(n) in ("cong_doan", "khach_hang") else n for n in bi]
+        tieu = (f"<b>{gio(t)}</b>  <span style='color:{CHU_MO}'>"
+                + ("trước sự cố" if not song else
+                   f"{len(bi)} điểm bị ảnh hưởng" + (": " + ", ".join(ten_bi[:9]) + (" …" if len(bi) > 9 else "")
+                                                       if bi else "")) + "</span>")
+        return [canh_do] + vet_hop + vet_muc + [mui, may, hover, chu_], tieu, len(bi)
+
+    # nền tĩnh: dải làn, tiêu đề cột, đoạn nối xám
+    nen = go.Scatter(x=sum(([x0, x1, None] for x0, x1, *_ in doan), []), y=sum(([y, y, None] for _, _, y, *_ in doan), []),
+                     mode="lines", line=dict(color=TRUC, width=2), hoverinfo="skip", showlegend=False)
     moc = list(range(0, den + 1, buoc))
     if moc[-1] != den:
         moc.append(den)
@@ -206,28 +376,42 @@ def ban_do_lan_truyen(r: dict, nhieu: list[Nhieu], giao_hang: dict | None = None
     frames, so = [], {}
     for t in moc:
         d, tieu, so[t] = du_lieu(t)
-        frames.append(go.Frame(data=d, traces=[1, 2], name=gio(t), layout=dict(title=dict(text=tieu))))
+        frames.append(go.Frame(data=d, traces=list(range(1, len(d) + 1)), name=gio(t), layout=dict(title=dict(text=tieu))))
     # mở sẵn ở lúc tệ nhất (nhiều điểm bị ảnh hưởng nhất); nút ▶ phát lại từ ngay trước sự cố
     te_nhat = max(moc, key=lambda t: (so[t], t >= t_inc, -t))
     data0, tieu0, _ = du_lieu(te_nhat)
     fig = go.Figure(data=[nen] + data0)
     fig.frames = frames
     phat = [gio(t) for t in moc if t >= bat_dau]
-    for u, v in CANH:
-        fig.add_annotation(x=POS[v][0], y=POS[v][1], ax=POS[u][0], ay=POS[u][1], xref="x", yref="y", axref="x",
-                           ayref="y", showarrow=True, arrowhead=2, arrowsize=1, arrowwidth=1, standoff=13,
-                           arrowcolor=TRUC, text="")
+    for i, (ten_lan, phu, tren, duoi) in enumerate(bc["lan"]):
+        fig.add_shape(type="rect", x0=-0.5, x1=X_MAX, y0=duoi, y1=tren, layer="below", line=dict(width=0),
+                      fillcolor=rgba("#ffffff", .035 if i % 2 == 0 else .012))
+        fig.add_annotation(x=COT["lan"], y=(tren + duoi) / 2, xanchor="left", showarrow=False, align="left",
+                           text=f"<b>{e(ten_lan).replace('&lt;br&gt;', '<br>')}</b><br><span style='font-size:11px;color:{CHU_MO}'>{e(phu)}</span>",
+                           font=dict(color=CHU_2, size=12))
+    for (x0, x1), nhan in [((COT["dau"], COT["cuoi"]), "TRƯỚC LẮP RÁP"), (COT["lap"], "GỘP"), (COT["tp"], "THÀNH PHẨM"),
+                           (COT["don"], "ĐƠN HÀNG"), (COT["xe"], "XE GIAO"), (COT["kh"], "KHÁCH")]:
+        fig.add_annotation(x=(x0 + x1) / 2, y=0.28, showarrow=False, text=nhan,
+                           font=dict(color=CHU_MO, size=11))
+    for k, (x0, x1, y0, y1) in hop.items():  # khung xám của thanh mức + vạch mục tiêu của đệm
+        if k == "TONG" or dc.loai(k) in ("dem", "linh_kien"):
+            if k in dc.dem:
+                xm = x0 + (x1 - x0) * dc.dem[k]["muc_tieu"] / dc.dem[k]["suc_chua"]
+                fig.add_shape(type="line", x0=xm, x1=xm, y0=y0 - 0.08, y1=y1 + 0.08, line=dict(color="#ffffff", width=2),
+                              layer="above")
     fig.update_layout(
-        height=470, margin=dict(l=10, r=10, t=46, b=10), title=dict(text=tieu0, x=0.01, font=dict(size=20, color=CHU)),
-        xaxis=dict(visible=False), yaxis=dict(visible=False, scaleanchor="x"),
-        updatemenus=[dict(type="buttons", direction="left", showactive=False, x=0.99, y=1.13, xanchor="right", yanchor="top",
+        height=int(78 * (0.7 - bc["day"])) + 60, margin=dict(l=10, r=10, t=46, b=10),
+        title=dict(text=tieu0, x=0.01, font=dict(size=18, color=CHU)),
+        xaxis=dict(visible=False, range=[-0.6, X_MAX + 0.4], fixedrange=True),
+        yaxis=dict(visible=False, range=[bc["day"] - 0.05, 0.5], fixedrange=True),
+        updatemenus=[dict(type="buttons", direction="left", showactive=False, x=0.99, y=1.1, xanchor="right", yanchor="top",
                           bgcolor=BE_MAT, bordercolor=TRUC, font=dict(color=CHU),
                           buttons=[dict(label="▶  Phát từ lúc sự cố", method="animate",
                                         args=[phat, dict(frame=dict(duration=260, redraw=True), mode="immediate",
                                                          transition=dict(duration=0))]),
                                    dict(label="❚❚", method="animate",
                                         args=[[None], dict(frame=dict(duration=0, redraw=False), mode="immediate")])])],
-        sliders=[dict(active=moc.index(te_nhat), x=0.02, len=0.96, y=-0.02, pad=dict(t=8),
+        sliders=[dict(active=moc.index(te_nhat), x=0.02, len=0.96, y=-0.01, pad=dict(t=8),
                       currentvalue=dict(visible=False), bgcolor=BE_MAT, bordercolor=TRUC, tickcolor=TRUC,
                       font=dict(color=CHU_MO, size=10), activebgcolor=NHAN,
                       steps=[dict(method="animate", label=gio(t) if t % 60 == 0 else "",
@@ -490,22 +674,25 @@ def trang_su_co(pt, rieng: dict, giay: float, tieu_de: str, tinh_huong: str, tai
               "</div><div class='d'>Chuyển line / ca sau, báo khách sớm và giao tách đợt.</div></div></div>")
 
     # ---- 01 lan truyền
-    tieu_de_muc("01", "Sự cố lan ra sao", "Lớp Logic (đồ thị networkx) – đang hiện lúc tệ nhất; bấm ▶ để xem lan từng 10 phút")
+    tieu_de_muc("01", "Sự cố lan ra sao", "Mỗi làn chạy trái → phải, chỉ gộp ở lắp ráp – đang hiện lúc tệ nhất; "
+                "bấm ▶ để xem lan từng 10 phút")
     lua = ["Nếu không làm gì"] + (["Nếu làm theo đề xuất"] if dx else [])
     chon = st.segmented_control("Kịch bản trên bản đồ", lua, default=lua[0], key=f"bd_{khoa}",
                                 label_visibility="collapsed") or lua[0]
     r_bd = dx if chon != lua[0] and dx else k0
-    c1, c2 = st.columns([2.4, 1])
-    with c1:
-        ve(ban_do_lan_truyen(r_bd, pt.nhieu, pt.giao_hang if r_bd is k0 else None), key=f"map_{khoa}_{chon}")
-        chu_giai([("Viền trắng = điểm xảy ra sự cố", "#ffffff")] + NHOM_TT)
-    with c2:
-        html_(f"<div class='wr-kpi-label' style='margin:.2rem 0 .4rem'>Diễn biến – {e(chon.lower())}</div>")
-        dong = [(t, nd) for t, nd in dong_thoi_gian(r_bd["kq"])]
-        html_("<div class='wr-card' style='max-height:470px;overflow:auto'>" + "".join(
-            f"<div style='display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)'>"
-            f"<span style='color:{NHAN};font-weight:700;font-variant-numeric:tabular-nums'>{gio(t)}</span>"
-            f"<span style='color:{CHU_2};font-size:.88rem'>{e(nd)}</span></div>" for t, nd in dong) + "</div>")
+    ve(ban_do_lan_truyen(r_bd, pt.nhieu, pt.giao_hang if r_bd is k0 else None), key=f"map_{khoa}_{chon}")
+    html_(f"<div class='wr-legend'><span>● máy</span><span><i style='background:{BE_MAT_2};border:1px solid {TRUC};"
+          f"width:26px'></i>thanh mức: phần tô = đang có, vạch trắng = mục tiêu đệm</span>"
+          f"<span><i style='background:#fff'></i>viền trắng + ⚡ = điểm xảy ra sự cố</span>"
+          f"<span><i style='background:#e66767'></i>đường đỏ = sự cố đã lan tới</span></div>")
+    chu_giai(NHOM_TT)
+    html_(f"<div class='wr-kpi-label' style='margin:.6rem 0 .4rem'>Diễn biến – {e(chon.lower())}</div>")
+    dong = [(t, nd) for t, nd in dong_thoi_gian(r_bd["kq"])]
+    html_("<div class='wr-card' style='max-height:260px;overflow:auto;display:grid;"
+          "grid-template-columns:repeat(auto-fit,minmax(340px,1fr));column-gap:24px'>" + "".join(
+        f"<div style='display:flex;gap:10px;padding:5px 0;border-bottom:1px solid rgba(255,255,255,.05)'>"
+        f"<span style='color:{NHAN};font-weight:700;font-variant-numeric:tabular-nums'>{gio(t)}</span>"
+        f"<span style='color:{CHU_2};font-size:.88rem'>{e(nd)}</span></div>" for t, nd in dong) + "</div>")
 
     # ---- 02 phương án
     tieu_de_muc("02", "Thang xử lý – mỗi phương án là một lần chạy thử tương lai",
