@@ -304,3 +304,9 @@ def test_ca_mai_thieu_linh_kien_thi_don_nguy_co_tre():
     d201 = next(d for d in r["don"] if d["Đơn"] == "D-201")
     assert not r["ok"] and d201["Trạng thái"] == "Nguy cơ trễ"
     assert r["thieu_lk"]["L-B"][0] == pytest.approx(400, abs=SL)   # cần 900, có 500
+
+
+def test_th3_hoa_tang_ca_va_bac_thi_chon_it_xao_tron():
+    # NCC tách lô và Đổi thứ tự + tăng tốc cùng 0 phút tăng ca, cùng bậc 3; NCC tách lô không đổi mã nên được chọn
+    # dù đắt hơn ~150.000 VND (luật khoa_chon: xáo trộn xét trước chi phí).
+    assert kb("th3")[0].de_xuat["pa"].ten.startswith("NCC tách lô")

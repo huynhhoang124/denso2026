@@ -1156,11 +1156,16 @@ class PhanTich:
         return pd.DataFrame(dong)
 
 
+def khoa_chon(r: dict) -> tuple:
+    """Luật chọn (mục 4.4): ít tăng ca → bậc thấp nhất → ít xáo trộn kế hoạch → rẻ nhất."""
+    return r["tang_ca_de_xuat"], r["pa"].bac, r["xao_tron"], r["chi_phi"]
+
+
 def chon_de_xuat(ket_qua: list[dict]) -> dict | None:
     kha_thi = [r for r in ket_qua if r["giu_don"] and r["pa"].bac >= 1]
     if not kha_thi:
         return None
-    return min(kha_thi, key=lambda r: (r["tang_ca_de_xuat"], r["pa"].bac, r["chi_phi"]))
+    return min(kha_thi, key=khoa_chon)
 
 
 def phan_tich(dc: DayChuyen, nhieu: list[Nhieu], phuong_an_them: list[PhuongAn] = (),
@@ -1434,7 +1439,7 @@ CACH_LAM = {1: "dồn việc của điểm bị sự cố sang các máy còn ch
 
 def giai_thich_de_xuat(dc: DayChuyen, pt: PhanTich) -> dict:
     """Vì sao chọn phương án đề xuất (so với từng phương án khác) và nó tối ưu thế nào – sinh từ chính các con số
-    engine đã tính, theo đúng luật của chon_de_xuat: giữ mọi đơn → ít tăng ca nhất → bậc thấp nhất → rẻ nhất."""
+    engine đã tính, theo đúng luật khoa_chon: giữ mọi đơn → ít tăng ca → bậc thấp → ít xáo trộn → rẻ nhất."""
     gh = pt.giao_hang if pt.giao_hang and pt.giao_hang["tre"] > 0 else None
     if gh:
         p, kip = gh["de_xuat"], [x for x in gh["phuong_an"] if x["Kịp hạn"]]
@@ -1465,12 +1470,12 @@ def giai_thich_de_xuat(dc: DayChuyen, pt: PhanTich) -> dict:
                 "loai": [(r["pa"].ten, r["pa"].ly_do or "vẫn trễ đơn") for r in pt.phuong_an if r["pa"].bac >= 1],
                 "toi_uu": ["Chuyển line / ca sau, báo khách sớm và giao tách đợt."]}
 
-    khoa = lambda r: (r["tang_ca_de_xuat"], r["pa"].bac, r["chi_phi"])
-    kha_thi = sorted((r for r in pt.phuong_an if r["giu_don"] and r["pa"].bac >= 1), key=khoa)
+    kha_thi = sorted((r for r in pt.phuong_an if r["giu_don"] and r["pa"].bac >= 1), key=khoa_chon)
     vi_sao = [f"So với không làm gì: sản lượng ca {k0['san_luong']:.0f} → **{dx['san_luong']:.0f} sp** "
               f"(cứu {dx['cuu_duoc']:+.0f})" + ("; không làm gì thì trễ đơn." if not k0["giu_don"] else "."),
               "Luật chọn: trong các phương án **giữ được mọi đơn**, lấy phương án **ít tăng ca nhất**; bằng nhau thì "
-              "lấy **bậc thấp nhất** trên thang xử lý (ít xáo trộn); vẫn bằng thì lấy **rẻ nhất**."]
+              "lấy **bậc thấp nhất** trên thang xử lý; rồi **ít xáo trộn kế hoạch nhất** (ít đổi mã, ít thay đổi); "
+              "vẫn bằng thì lấy **rẻ nhất**."]
     ke = kha_thi[1] if len(kha_thi) > 1 else None
     if ke is None:
         vi_sao.append("Đây là phương án **duy nhất** giữ được mọi đơn.")
@@ -1480,8 +1485,13 @@ def giai_thich_de_xuat(dc: DayChuyen, pt: PhanTich) -> dict:
     elif ke["pa"].bac > dx["pa"].bac:
         vi_sao.append(f"Quyết định ở bước 2: cùng tăng ca {tc(dx)} với {ke['pa'].ten} nhưng ở bậc thấp hơn "
                       f"({BAC[dx['pa'].bac]}) – dùng bước nhẹ nhất là đủ.")
+    elif ke["xao_tron"] > dx["xao_tron"]:
+        vi_sao.append(f"Quyết định ở bước 3: cùng tăng ca và cùng bậc với {ke['pa'].ten} nhưng ít xáo trộn kế hoạch "
+                      f"hơn ({dx['muc_xao_tron'].lower()} so với {ke['muc_xao_tron'].lower()})"
+                      + (f", dù đắt hơn ~{dx['chi_phi'] - ke['chi_phi']:,.0f} VND." if dx["chi_phi"] > ke["chi_phi"] + 0.5
+                         else "."))
     else:
-        vi_sao.append(f"Quyết định ở bước 3: cùng tăng ca và cùng bậc với {ke['pa'].ten} nhưng rẻ hơn "
+        vi_sao.append(f"Quyết định ở bước 4: cùng tăng ca, cùng bậc, cùng mức xáo trộn với {ke['pa'].ten} nhưng rẻ hơn "
                       f"~{ke['chi_phi'] - dx['chi_phi']:,.0f} VND.")
 
     loai = []
@@ -1498,8 +1508,12 @@ def giai_thich_de_xuat(dc: DayChuyen, pt: PhanTich) -> dict:
                 ly += f" (dù rẻ hơn ~{dx['chi_phi'] - r['chi_phi']:,.0f} VND)"
         elif p.bac > dx["pa"].bac:
             ly = f"cùng tăng ca nhưng dùng bước nặng hơn ({BAC.get(p.bac, p.bac)}) – không cần thiết"
+        elif r["xao_tron"] > dx["xao_tron"]:
+            ly = f"cùng tăng ca, cùng bậc nhưng xáo trộn kế hoạch nhiều hơn ({r['muc_xao_tron'].lower()})"
+            if r["chi_phi"] < dx["chi_phi"] - 0.5:
+                ly += f", dù rẻ hơn ~{dx['chi_phi'] - r['chi_phi']:,.0f} VND"
         elif r["chi_phi"] > dx["chi_phi"] + 0.5:
-            ly = f"cùng tăng ca, cùng bậc nhưng đắt hơn ~{r['chi_phi'] - dx['chi_phi']:,.0f} VND"
+            ly = f"cùng tăng ca, cùng bậc, cùng mức xáo trộn nhưng đắt hơn ~{r['chi_phi'] - dx['chi_phi']:,.0f} VND"
         else:
             ly = "kết quả tương đương"
         if r["giu_don"] and r["san_luong"] > dx["san_luong"] + 0.5:

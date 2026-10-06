@@ -148,6 +148,8 @@ Mô phỏng theo bước thời gian (ví dụ 1 phút). Ở mỗi bước: sả
 
 Mỗi phương án được chấm theo ba tiêu chí: sản phẩm cứu được, chi phí, mức xáo trộn kế hoạch (càng ít thay đổi càng tốt).
 
+Luật đề xuất: trong các phương án giữ được mọi đơn, chọn phương án ít tăng ca nhất; bằng nhau thì bậc thấp nhất trên thang; rồi ít xáo trộn kế hoạch nhất; cuối cùng mới đến chi phí thấp nhất.
+
 #### 4.5 Cảnh báo theo mức tác động
 
 | Mức | Điều kiện | Gửi cho |
@@ -520,6 +522,10 @@ Mức độ phù hợp chủ đề: Data Utilization (nối dữ liệu bốn kh
 - Máy có công suất tối đa được duyệt hay không; quy định tăng ca nội bộ ra sao?
 
 - Dữ liệu ghi theo từng sản phẩm hay theo lô; khóa nào nối giữa các khâu?
+
+- Dập và Gia công có phải đổi khuôn / chương trình khi chuyển giữa các mã (X, Y) không, hay chỉ Lắp ráp phải đổi? (mô hình hiện chỉ tính đổi mã ở Lắp ráp)
+
+- Lịch nhập linh kiện cho ngày hôm sau (ví dụ lô L-B về trước ca mai) lấy ở đâu? (demo đang giả định 500 L-B về trước ca mai)
 
 ### 10. Ghi chú rà soát
 
