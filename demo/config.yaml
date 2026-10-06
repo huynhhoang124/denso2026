@@ -61,6 +61,7 @@ linh_kien:
     dung_tai: LR
     ton_kho: 500
     lich_ve: []
+    ve_ngay_mai: 500           # giả định demo: lô về trước ca mai (D-201 cần 900, kho chỉ 500)
 
 don_hang:
   - {id: D-101, khach: A, san_pham: X, so_luong: 500, ngay: 0, han: "17:00", chuyen: XE-A}

@@ -561,6 +561,14 @@ def danh_gia_don(kq: KetQua, tang_ca: int = 0) -> dict:
         lay = min(d["so_luong"], max(con_lai[d["san_pham"]], 0.0))
         con_lai[d["san_pham"]] -= lay
         can[d["san_pham"]] += d["so_luong"] - lay
+    # linh kiện cho ca mai: tồn cuối ngày + lô về trước ca mai phải đủ cho phần còn phải làm
+    thieu_lk = {}
+    for lk, info in dc.linh_kien.items():
+        can_lk = sum(c * dc.san_pham[sp]["dinh_muc"] for sp, c in can.items() if dc.lk_cua(sp) == lk)
+        co_lk = kq.lk[lk][te] + info.get("ve_ngay_mai", 0)
+        if can_lk > co_lk + 0.5:
+            thieu_lk[lk] = (can_lk - co_lk, can_lk, co_lk)
+    ok_all &= not thieu_lk
     bat_dau = kq.sp_lr[te - 1]
     ma_can = [sp for sp in can if can[sp] > 0.5]
     so_doi = len(ma_can) - (1 if bat_dau in ma_can else 0)
@@ -573,12 +581,19 @@ def danh_gia_don(kq: KetQua, tang_ca: int = 0) -> dict:
     thu_tu = sorted(ngay_mai, key=lambda d: (d["san_pham"] != bat_dau, ngay_mai.index(d)))
     for i, d in enumerate(thu_tu):
         cuoi = i == len(thu_tu) - 1
-        ok = du_mai or not cuoi
+        lk = dc.lk_cua(d["san_pham"])
+        ok = (du_mai or not cuoi) and lk not in thieu_lk
+        if lk in thieu_lk:
+            thieu, can_lk, co_lk = thieu_lk[lk]
+            ghi = (f"thiếu {thieu:.0f} {lk} cho ca mai (cần {can_lk:.0f}, có {co_lk:.0f} gồm tồn cuối ngày + lô về "
+                   f"trước ca) – đặt thêm trước giờ vào ca")
+        elif ok:
+            ghi = f"ngày mai còn phải làm {can[d['san_pham']]:.0f} sp"
+        else:
+            ghi = f"ca mai thiếu ~{thieu_mai:.0f} sp (cần ~{phut_mai - dc.ca:.0f} phút tăng ca)"
         dong.append({"Đơn": d["id"], "Khách": d.get("khach", "–"), "Mã": d["san_pham"], "Số lượng": d["so_luong"],
-                     "Hạn": "ngày mai", "Trạng thái": "Kịp" if ok else "Nguy cơ trễ",
-                     "Ghi chú": (f"ngày mai còn phải làm {can[d['san_pham']]:.0f} sp"
-                                 if ok else f"ca mai thiếu ~{thieu_mai:.0f} sp (cần ~{phut_mai - dc.ca:.0f} phút tăng ca)")})
-    return {"ok": ok_all, "don": dong, "phut_ngay_mai": phut_mai, "bu_dem": bu_dem}
+                     "Hạn": "ngày mai", "Trạng thái": "Kịp" if ok else "Nguy cơ trễ", "Ghi chú": ghi})
+    return {"ok": ok_all, "don": dong, "phut_ngay_mai": phut_mai, "bu_dem": bu_dem, "thieu_lk": thieu_lk}
 
 
 # ---------------------------------------------------------------- phương án

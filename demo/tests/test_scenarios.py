@@ -292,3 +292,15 @@ def test_giai_thich_khop_phuong_an_de_xuat(ma):
     ten = pt.giao_hang["de_xuat"]["Phương án"] if ma == "th7" else pt.de_xuat["pa"].ten
     assert g["ten"] == ten and g["vi_sao"] and g["toi_uu"]
     assert all(t != ten for t, _ in g["loai"])  # phương án được chọn không nằm trong danh sách bị loại
+
+
+def test_ca_mai_thieu_linh_kien_thi_don_nguy_co_tre():
+    import copy
+    from engine import danh_gia_don
+    cfg = copy.deepcopy(dc.cfg)
+    next(lk for lk in cfg["linh_kien"] if lk["id"] == "L-B")["ve_ngay_mai"] = 0
+    kq = mo_phong(DayChuyen(cfg), [], ChinhSach(muc=1))
+    r = danh_gia_don(kq)
+    d201 = next(d for d in r["don"] if d["Đơn"] == "D-201")
+    assert not r["ok"] and d201["Trạng thái"] == "Nguy cơ trễ"
+    assert r["thieu_lk"]["L-B"][0] == pytest.approx(400, abs=SL)   # cần 900, có 500
