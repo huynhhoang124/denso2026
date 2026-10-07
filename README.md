@@ -53,6 +53,7 @@ tay – chậm, dễ sai và có thể ra ba con số khác nhau cho cùng một
    phương án được chạy lại để ra số sản phẩm cứu được, giờ tăng ca, chi phí và mức xáo trộn. **Con người chọn.**
 
 Tài liệu ý tưởng đầy đủ: [`IDEA.md`](IDEA.md) (bản gốc: [`D3_Y_tuong_va_giai_phap.docx`](D3_Y_tuong_va_giai_phap.docx)).
+Báo cáo tổng thể (Word, 19 trang – giải pháp, luồng hoạt động, hướng dẫn chạy, kết quả): [`Bao_cao_tong_the_D3.docx`](Bao_cao_tong_the_D3.docx).
 
 ---
 
@@ -228,6 +229,7 @@ denso2026/
 ├── README.md                     ← file này
 ├── IDEA.md                       ← ý tưởng và giải pháp (bản Markdown)
 ├── D3_Y_tuong_va_giai_phap.docx  ← bản gốc
+├── Bao_cao_tong_the_D3.docx      ← báo cáo tổng thể (Word)
 ├── HANDOFF.md                    ← ghi chú chuyển giao giữa các phiên phát triển
 ├── .streamlit/config.toml        ← giao diện tối "War Room"
 └── demo/
